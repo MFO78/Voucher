@@ -4,22 +4,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Family Vouchers - International Edition</title>
+    <title>Family Vouchers - Stable QR</title>
     
-    <!-- React & ReactDOM -->
+    <!-- 1. React Core -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     
-    <!-- Babel -->
+    <!-- 2. Babel (Transpiler) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Tailwind CSS -->
+    <!-- 3. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- JsBarcode -->
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+    <!-- 4. QRCode.js (Versione CDN Stabile) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-    <!-- html2canvas -->
+    <!-- 5. HTML2Canvas -->
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
     <script>
@@ -47,43 +47,29 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- TRANSLATIONS & UI TEXT ---
-        const uiText = {
-            it: {
-                title: "Vouchers",
-                subtitle: "Family",
-                back: "Indietro",
-                homeTitle: "Chi vuoi viziare oggi?",
-                voucherCount: "Buono",
-                validity: "Validità: ∞",
-                redeemed: "USATO",
-                restore: "↺ Ripristina",
-                use: "✅ Usa Ora",
-                random: "🎲 Pesca Random",
-                share: "📤 Condividi",
-                loading: "Sto preparando il regalo...",
-                saved: "Immagine salvata! Inviala manualmente.",
-                error: "Errore nella creazione dell'immagine."
-            },
-            en: {
-                title: "Vouchers",
-                subtitle: "Family",
-                back: "Back",
-                homeTitle: "Who to spoil today?",
-                voucherCount: "Voucher",
-                validity: "Validity: ∞",
-                redeemed: "USED",
-                restore: "↺ Restore",
-                use: "✅ Use Now",
-                random: "🎲 Random Pick",
-                share: "📤 Share",
-                loading: "Wrapping your gift...",
-                saved: "Image saved! Send it manually.",
-                error: "Error creating image."
+        // --- SISTEMA AUDIO E HAPTIC ---
+        const playSound = (type) => {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination);
+            const now = ctx.currentTime;
+            
+            if (type === 'click') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(600, now); osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'shutter') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(800, now); 
+                gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                osc.start(now); osc.stop(now + 0.08);
             }
         };
+        const triggerHaptic = () => { if (navigator.vibrate) navigator.vibrate(10); };
 
-        // --- DATABASE VOUCHER (IT & EN) ---
+        // --- DATABASE ---
         const voucherDB = {
             mamma: {
                 color: "bg-pink-500", lightColor: "bg-pink-50", darkColor: "bg-pink-900/40", textColor: "text-pink-600",
@@ -244,29 +230,57 @@
                         items: ["Late bedtime", "Sweet of choice", "Creative afternoon", "No cleanup", "Disney movie", "Dad Hairdresser", "Just us trip", "3-flavor ice cream", "Baking cookies", "Dinner choice", "Double story", "Disco dance", "No chores", "Carpet picnic", "Creative project", "Nail polish", "Magic tent", "Free play", "Learning new things", "Favorite park", "Pajama day", "Pick the game", "Small gift", "Drawing together", "Crushing hug"]
                     }
                 }
+            },
+            punizione_figlio: {
+                color: "bg-yellow-600", lightColor: "bg-yellow-50", darkColor: "bg-yellow-900/40", textColor: "text-yellow-700",
+                icon: "🚧", 
+                content: {
+                    it: {
+                        title: "Punizione Figlio", desc: "Reality Check",
+                        finePrint: ["Ricorso Respinto.", "La legge non ammette ignoranza.", "Esecuzione immediata.", "Colpa tua, non mia.", "Niente lamentele."],
+                        items: ["Niente Videogiochi (24h)", "Lava i piatti stasera", "Butta la spazzatura", "Riordina camera", "Niente Wi-Fi (2h)", "Apparecchia/Sparecchia", "Pulisci le scarpe", "Aiuta a cucinare", "Niente uscita stasera", "Sveglia presto", "Rifare il letto", "Aspirapolvere salotto", "Niente cuffie (1h)", "Chiedi scusa a sorella", "Abbraccia mamma (zitto)", "Leggi un libro", "Porta fuori il cane", "Niente dolci oggi", "Scrivi SMS a nonna", "Svuota lavastoviglie", "Pulisci i vetri", "Niente TV", "Studia 1 ora in più", "Niente calcio in TV", "Fai i compiti subito"]
+                    },
+                    en: {
+                        title: "Son Penalty", desc: "Reality Check",
+                        finePrint: ["Appeal Denied.", "Ignorance is no excuse.", "Immediate execution.", "Your fault, not mine.", "No whining allowed."],
+                        items: ["No Video Games (24h)", "Wash dishes tonight", "Take out trash", "Clean room (deep)", "No Wi-Fi (2h)", "Set/Clear table", "Clean your shoes", "Help cooking", "No going out tonight", "Wake up early", "Make bed perfectly", "Vacuum living room", "No headphones (1h)", "Apologize to sister", "Hug mom (quietly)", "Read a real book", "Walk dog (long)", "No sweets today", "Text grandma", "Empty dishwasher", "Clean windows", "No TV", "Study 1h extra", "No soccer on TV", "Homework now"]
+                    }
+                }
+            },
+            punizione_figlia: {
+                color: "bg-red-600", lightColor: "bg-red-50", darkColor: "bg-red-900/40", textColor: "text-red-700",
+                icon: "📵", 
+                content: {
+                    it: {
+                        title: "Punizione Figlia", desc: "Digital Detox",
+                        finePrint: ["Non provare a piangere.", "Dura lex, sed lex.", "Niente avvocati.", "Lo faccio per il tuo bene.", "Silenzio in aula."],
+                        items: ["Niente Social (24h)", "Pulisci il bagno", "Niente trucco domani", "Riordina l'armadio", "Aiuta a stendere", "Niente telefono a cena", "Apparecchia/Sparecchia", "Niente specchio (1h)", "Studia 1 ora in più", "Niente amiche oggi", "Sveglia presto", "Rifare il letto", "Spolvera la camera", "Niente piastra capelli", "Chiedi scusa a fratello", "Abbraccia papà", "Leggi un capitolo", "Niente TV stasera", "Scrivi alla zia", "Svuota lavastoviglie", "Pulisci la cucina", "Niente musica (1h)", "Aiuta con la spesa", "Niente smalto", "Fai i compiti subito"]
+                    },
+                    en: {
+                        title: "Daughter Penalty", desc: "Digital Detox",
+                        finePrint: ["Don't try crying.", "The law is the law.", "No lawyers.", "For your own good.", "Silence in court."],
+                        items: ["No Social Media (24h)", "Clean the bathroom", "No makeup tomorrow", "Organize closet", "Help hang laundry", "No phone at dinner", "Set/Clear table", "No mirror (1h)", "Study 1h extra", "No friends today", "Wake up early", "Make bed", "Dust your room", "No hair straightener", "Apologize to brother", "Hug dad", "Read a chapter", "No TV tonight", "Text aunt", "Empty dishwasher", "Clean kitchen", "No music (1h)", "Help with groceries", "No nail polish", "Homework now"]
+                    }
+                }
             }
         };
 
-        // --- AUDIO & HAPTIC ---
-        const playSound = (type) => {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContext) return;
-            const ctx = new AudioContext();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain); gain.connect(ctx.destination);
-            const now = ctx.currentTime;
-            if (type === 'click') {
-                osc.type = 'sine'; osc.frequency.setValueAtTime(600, now); osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
-                gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now + 0.1);
-                osc.start(now); osc.stop(now + 0.1);
-            } else if (type === 'shutter') {
-                osc.type = 'square'; osc.frequency.setValueAtTime(800, now); 
-                gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
-                osc.start(now); osc.stop(now + 0.08);
+        const uiText = {
+            it: {
+                title: "Vouchers", subtitle: "Family", back: "Indietro", homeTitle: "Chi vuoi viziare (o raddrizzare)?",
+                voucherCount: "Buono", validity: "Validità: Immediata", redeemed: "ESIGITO",
+                restore: "↺ Ripristina", use: "✅ Esegui Ora", random: "🎲 Pesca Random", share: "📤 Notifica",
+                loading: "Sto preparando il verdetto...", saved: "Immagine salvata! Inviala al colpevole.", error: "Errore nella creazione dell'immagine.",
+                scanMe: "SCANSIONAMI"
+            },
+            en: {
+                title: "Vouchers", subtitle: "Family", back: "Back", homeTitle: "Who to spoil (or discipline)?",
+                voucherCount: "Voucher", validity: "Validity: Immediate", redeemed: "ENFORCED",
+                restore: "↺ Restore", use: "✅ Execute Now", random: "🎲 Random Pick", share: "📤 Notify",
+                loading: "Preparing the verdict...", saved: "Image saved! Send to the culprit.", error: "Error creating image.",
+                scanMe: "SCAN ME"
             }
         };
-        const triggerHaptic = () => { if (navigator.vibrate) navigator.vibrate(10); };
 
         const App = () => {
             const [category, setCategory] = useState(null);
@@ -274,23 +288,54 @@
             const [darkMode, setDarkMode] = useState(false);
             const [redeemed, setRedeemed] = useState(false);
             const [sharing, setSharing] = useState(false);
-            const [lang, setLang] = useState('it'); // Language State
-            const [barcodeId, setBarcodeId] = useState("000000");
-            const barcodeRef = useRef(null);
+            const [lang, setLang] = useState('it');
+            const qrRef = useRef(null);
             const cardRef = useRef(null);
 
+            // Deep Linking
+            useEffect(() => {
+                const params = new URLSearchParams(window.location.search);
+                const urlCat = params.get('c');
+                const urlIdx = params.get('i');
+                if (urlCat && voucherDB[urlCat] && urlIdx) {
+                    setCategory(urlCat);
+                    const safeIdx = Math.max(0, Math.min(parseInt(urlIdx), voucherDB[urlCat].content['it'].items.length - 1));
+                    setIndex(safeIdx);
+                }
+            }, []);
+
+            // Dark Mode
             useEffect(() => {
                 if (darkMode) document.documentElement.classList.add('dark');
                 else document.documentElement.classList.remove('dark');
             }, [darkMode]);
 
+            // GENERAZIONE QR SICURA
             useEffect(() => {
-                if (category && barcodeRef.current) {
-                    const id = Math.floor(1000000 + Math.random() * 900000).toString();
-                    setBarcodeId(id);
-                    JsBarcode(barcodeRef.current, id, { format: "CODE128", lineColor: "#000", width: 1.5, height: 40, displayValue: false, background: "#fff" });
+                if (category && qrRef.current && typeof QRCode !== 'undefined') {
+                    // Pulisci il contenitore
+                    qrRef.current.innerHTML = '';
+                    
+                    const deepLink = `https://mfo78.github.io/Voucher/?c=${category}&i=${index}`;
+                    
+                    // Aspetta che il DOM sia pronto
+                    setTimeout(() => {
+                        try {
+                            new QRCode(qrRef.current, {
+                                text: deepLink,
+                                width: 100,
+                                height: 100,
+                                colorDark : "#000000",
+                                colorLight : "#ffffff",
+                                correctLevel : QRCode.CorrectLevel.H
+                            });
+                        } catch (e) {
+                            console.error("QR Generation Failed:", e);
+                            qrRef.current.innerHTML = "<p style='font-size:10px; color:red'>QR Error</p>";
+                        }
+                    }, 50);
                 }
-            }, [index, category]);
+            }, [index, category, lang]);
 
             const handleShare = async () => {
                 if (!cardRef.current) return;
@@ -300,7 +345,7 @@
                     const canvas = await html2canvas(cardRef.current, { scale: 2, backgroundColor: null, useCORS: true, logging: false });
                     canvas.toBlob(async (blob) => {
                         if (!blob) throw new Error("Blob creation failed");
-                        const fileName = `voucher_${category}_${barcodeId}.png`;
+                        const fileName = `voucher_${category}_qr.png`;
                         const file = new File([blob], fileName, { type: 'image/png' });
                         if (navigator.canShare && navigator.canShare({ files: [file] })) {
                             try { await navigator.share({ files: [file], title: 'Voucher', text: 'Regalo! 🎁' }); } catch (err) {}
@@ -318,7 +363,6 @@
             const nextCard = () => { setRedeemed(false); setIndex((prev) => (prev + 1) % voucherDB[category].content[lang].items.length); playSound('click'); };
             const prevCard = () => { setRedeemed(false); setIndex((prev) => (prev - 1 + voucherDB[category].content[lang].items.length) % voucherDB[category].content[lang].items.length); playSound('click'); };
             const randomCard = () => { setRedeemed(false); setIndex(Math.floor(Math.random() * voucherDB[category].content[lang].items.length)); playSound('click'); };
-            
             const toggleLang = () => { setLang(prev => prev === 'it' ? 'en' : 'it'); playSound('click'); };
 
             const currentData = category ? voucherDB[category] : null;
@@ -326,32 +370,32 @@
 
             return (
                 <div className={`min-h-screen flex flex-col items-center justify-center transition-colors duration-300 ${darkMode ? 'bg-slate-950' : 'bg-gray-50'}`}>
+                    
+                    {/* Sfondo Animato */}
                     <div className="fixed inset-0 overflow-hidden pointer-events-none">
                         <div className={`absolute -top-[20%] -left-[20%] w-[70%] h-[70%] rounded-full blur-[100px] opacity-30 ${darkMode ? 'bg-purple-900' : 'bg-pink-200'}`}></div>
                         <div className={`absolute -bottom-[20%] -right-[20%] w-[70%] h-[70%] rounded-full blur-[100px] opacity-30 ${darkMode ? 'bg-blue-900' : 'bg-blue-200'}`}></div>
                     </div>
 
-                    {/* NAVBAR */}
+                    {/* Navbar */}
                     <nav className={`w-full z-20 px-6 py-4 flex justify-between items-center sticky top-0 backdrop-blur-md border-b transition-colors ${darkMode ? 'bg-slate-900/80 border-slate-700' : 'bg-white/70 border-gray-200'}`}>
                         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCategory(null)}>
                             <span className="text-2xl">✨</span>
                             <h1 className={`font-bold text-xl ${darkMode ? 'text-white' : 'text-gray-900'}`}>{uiText[lang].title}<span className="opacity-50 font-normal"> {uiText[lang].subtitle}</span></h1>
                         </div>
                         <div className="flex gap-2">
-                            {/* LANG TOGGLE */}
-                            <button onClick={toggleLang} className={`px-3 py-1 rounded-full text-xs font-bold border ${darkMode ? 'border-slate-600 text-white' : 'bg-white text-gray-800'}`}>
-                                {lang.toUpperCase()}
-                            </button>
-                            <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-full ${darkMode ? 'bg-slate-800 text-yellow-400' : 'bg-gray-200 text-gray-600'}`}>
-                                {darkMode ? '☀️' : '🌙'}
-                            </button>
+                            <button onClick={toggleLang} className={`px-3 py-1 rounded-full text-xs font-bold border ${darkMode ? 'border-slate-600 text-white' : 'bg-white text-gray-800'}`}>{lang.toUpperCase()}</button>
+                            <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-full ${darkMode ? 'bg-slate-800 text-yellow-400' : 'bg-gray-200 text-gray-600'}`}>{darkMode ? '☀️' : '🌙'}</button>
                             {category && (<button onClick={() => setCategory(null)} className={`px-4 py-2 rounded-full text-sm font-bold border ${darkMode ? 'border-slate-600 text-white' : 'bg-white text-gray-800'}`}>{uiText[lang].back}</button>)}
                         </div>
                     </nav>
 
+                    {/* Loading Overlay */}
                     {sharing && (<div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white animate-fade-in"><div className="text-4xl animate-bounce mb-4">📸</div><p className="font-bold">{uiText[lang].loading}</p></div>)}
 
                     <main className="flex-1 w-full max-w-4xl z-10 p-4 flex flex-col items-center justify-center">
+                        
+                        {/* CATEGORY GRID */}
                         {!category && (
                             <div className="w-full animate-fade-in">
                                 <h2 className={`text-center text-3xl md:text-4xl font-black mb-8 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{uiText[lang].homeTitle}</h2>
@@ -367,10 +411,13 @@
                             </div>
                         )}
 
+                        {/* VOUCHER CARD */}
                         {category && currentContent && (
                             <div className="flex flex-col items-center w-full max-w-sm animate-fade-in">
                                 <div className="relative w-full aspect-[3/5] perspective-1000 mb-6">
                                     <div ref={cardRef} className={`relative w-full h-full rounded-[32px] overflow-hidden flex flex-col shadow-2xl border-4 transition-all duration-300 transform ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-white'} ${redeemed ? 'grayscale opacity-90' : ''}`}>
+                                        
+                                        {/* HEADER */}
                                         <div className={`h-[35%] ${currentData.color} p-6 flex flex-col items-center justify-center text-white relative overflow-hidden`}>
                                             <div className="absolute top-[-50%] left-[-50%] w-full h-full bg-white/20 rounded-full blur-3xl"></div>
                                             <div className="text-5xl drop-shadow-lg z-10">{currentData.icon}</div>
@@ -378,6 +425,7 @@
                                             <p className="z-10 text-xs font-bold uppercase opacity-80 mt-1 tracking-wider bg-black/10 px-3 py-1 rounded-full">{currentContent.desc}</p>
                                         </div>
 
+                                        {/* BODY */}
                                         <div className={`flex-1 flex flex-col items-center justify-center p-6 text-center ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
                                             <div className={`absolute top-[33%] -left-3 w-6 h-6 rounded-full ${darkMode ? 'bg-slate-950' : 'bg-gray-50'}`}></div>
                                             <div className={`absolute top-[33%] -right-3 w-6 h-6 rounded-full ${darkMode ? 'bg-slate-950' : 'bg-gray-50'}`}></div>
@@ -387,9 +435,10 @@
                                                 <p className={`text-xs md:text-sm font-medium italic opacity-70 px-4 ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>{currentContent.finePrint[index % currentContent.finePrint.length]}</p>
                                             </div>
 
-                                            <div className="mt-auto w-full bg-white p-3 rounded-xl flex flex-col items-center shadow-sm">
-                                                <div className="flex justify-between w-full text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1"><span>{uiText[lang].validity}</span><span>ID: {barcodeId.substring(0,4)}</span></div>
-                                                <canvas ref={barcodeRef} className="h-10 w-full"></canvas>
+                                            {/* QR AREA (FIXED) */}
+                                            <div className="mt-auto w-full bg-white p-4 rounded-xl flex flex-col items-center shadow-sm">
+                                                <div className="flex justify-between w-full text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2"><span>{uiText[lang].validity}</span><span>{uiText[lang].scanMe}</span></div>
+                                                <div ref={qrRef} className="flex justify-center p-2 bg-white rounded-lg"></div>
                                             </div>
 
                                             {redeemed && (<div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-[2px] z-20"><div className="border-[6px] border-red-600 text-red-600 font-black text-4xl px-4 py-2 transform -rotate-12 bg-white rounded-xl shadow-2xl">{uiText[lang].redeemed}</div></div>)}
@@ -420,4 +469,5 @@
     </script>
 </body>
 </html>
+
 
