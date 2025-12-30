@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Family Vouchers - Logic Corrected</title>
+    
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- JsBarcode -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+
+    <!-- html2canvas -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['Roboto Mono', 'monospace'] },
+                    animation: { 'bounce-short': 'bounce 0.5s infinite', 'fade-in': 'fadeIn 0.3s ease-out' },
+                    keyframes: { fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } } }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { -webkit-tap-highlight-color: transparent; font-family: 'Inter', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .preserve-3d { transform-style: preserve-3d; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased overflow-x-hidden transition-colors duration-300">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- DATABASE VOUCHER (LOGICA: CATEGORIA = DESTINATARIO) ---
+        const voucherDB = {
+            mamma: {
+                // Giver: Figlio/Marito -> Receiver: Mamma
+                color: "bg-pink-500", lightColor: "bg-pink-50", darkColor: "bg-pink-900/40", 
+                textColor: "text-pink-600",
+                icon: "👑", title: "Mamma", desc: "Dittatrice Benevola",
+                finePrint: [
+                    "Termini: La ragione è mia di default.",
+                    "Nota: Non abusare della mia pazienza.",
+                    "Valore: Inestimabile (come le mie occhiaie).",
+                    "Richiede un 'Grazie' sentito.",
+                    "Scade se alzi la voce."
+                ],
+                items: [
+                    "Abbraccio rigenerante (o stritolante)", "Niente lamentele per 1 ora (Miracolo)", "Riordino camera (senza minacce)", 
+                    "Colazione a letto (senza briciole)", "Tu scegli il film (anche se dormi)", "Aiuto cucina (senza fare danni)", 
+                    "Giornata 'Hai Ragione Tu'", "Ascolto attivo (senza cellulare)", "Complimento sincero sul vestito", 
+                    "Tregua conflitti in casa (1 ora)", "Servizio taxi (guido piano)", "Caffè preparato come piace a te", 
+                    "Dichiarazione d'affetto pubblica", "Compiti fatti senza drammi greci", "Massaggio relax spalle", 
+                    "Uscita gelato (offro io)", "Annaffiatura piante (senza annegarle)", "Niente domanda 'cosa si mangia'", 
+                    "Letto rifatto (quasi bene)", "Ritiro panni stesi (asciutti)", "Ti insegno a usare quella App", "Pomeriggio shopping (porto le borse)", 
+                    "Svuoto la lavastoviglie (tutta)", "Un bacio a sorpresa", "Giornata Spa Casalinga", "Niente musica alta oggi", 
+                    "Pulisco io il bagno (davvero)", "Ti accompagno dove vuoi", "Non sbuffo per 24 ore", "Ti preparo la tisana", 
+                    "Massaggio ai piedi", "Ascolto i tuoi pettegolezzi sui vicini", "Ti faccio le unghie", "Ti aiuto col backup del telefono", 
+                    "Giornata 'Regina del Telecomando'", "Niente 'dov'è la mia roba?'", "Cucino io la cena (pizza d'asporto?)", 
+                    "Ti lascio dormire fino a tardi", "Un buono per 'Vinci Tu'", "Faccio la spesa pesante", "Metto in ordine le scarpe all'ingresso", 
+                    "Pulisco i vetri (senza aloni)", "Ti faccio un biglietto carino", "Guardiamo la tua serie noiosa", 
+                    "Niente caos in salotto", "Rispondo subito al telefono", "Ti aiuto a scegliere l'outfit", "Ti dico che sei giovane", "Tuttofare per un pomeriggio"
+                ]
+            },
+            papa: {
+                // Giver: Figlio/Moglie -> Receiver: Papà
+                color: "bg-blue-600", lightColor: "bg-blue-50", darkColor: "bg-blue-900/40", 
+                textColor: "text-blue-600",
+                icon: "👔", title: "Papà", desc: "Il Boss (ma decide Mamma)",
+                finePrint: [
+                    "Il telecomando torna al proprietario a fine uso.",
+                    "Non valido durante il pisolino sacro.",
+                    "Richiede approvazione della Mamma.",
+                    "Attenzione: Potrebbe causare russamento.",
+                    "Include battuta squallida in omaggio."
+                ],
+                items: [
+                    "Bibita fresca sul divano", "Dominio assoluto del telecomando", "Nessuna richiesta soldi (24h)", "Lavaggio auto (o pioggia, decidi tu)", 
+                    "Visione documentario storico noioso", "Silenzio sacro durante pisolino", "Segreto custodito (non dirlo a mamma)", "Lezione di vita non richiesta (ti ascolto)", 
+                    "Abbraccio virile (pacca sulla schiena)", "Facchino per la spesa", "Rispetto per i tuoi attrezzi", "Vittoria a carte concessa per pietà", 
+                    "Risata finta alla tua battuta", "Lotta sul tappeto", "Preparazione snack notturno", "Jolly 'Papà ha sempre ragione'", 
+                    "Assistente reggi-torcia", "Giro in bici tranquillo", "Detox digitale (spengo il WiFi)", "Disegno ritratto (brutto)", 
+                    "Giornata senza capricci", "Ricerca occhiali che hai in testa", "Ultimo biscotto ceduto", "Selfie con facce buffe", 
+                    "Attestato di forza sovrumana", "Grigliata: io guardo, tu cucini", "Non tocco il termostato", "Ti spiego un meme di internet", 
+                    "Ti aiuto in giardino (a guardare)", "Taglio l'erba (domani)", "Guardiamo un film western", "Niente commenti sui miei pantaloni", 
+                    "Ti preparo il caffè dopo pranzo", "Ascolto storia di quando eri giovane", "Ti lascio il capotavola", "Accompagnatore Leroy Merlin", 
+                    "Niente musica a palla in auto", "Ti chiedo consiglio tecnico (finto)", "Partita a dama", "Giornata 'Re del Divano'", 
+                    "Ti porto il tablet", "Massaggio alla schiena", "Non ti chiedo di riparare nulla oggi", "Uscita solo uomini (bar)", 
+                    "Birra gelata pronta all'uso", "Ti aiuto a configurare la TV", "Niente discussioni sulla politica", "Ti lucido le scarpe", 
+                    "Complimento sui bicipiti", "Ti lascio vincere a braccio di ferro"
+                ]
+            },
+            zia: {
+                // Giver: Nipote -> Receiver: Zia
+                // CORRETTO: Cose che il nipote fa PER la zia
+                color: "bg-fuchsia-500", lightColor: "bg-fuchsia-50", darkColor: "bg-fuchsia-900/40", 
+                textColor: "text-fuchsia-600",
+                icon: "👜", title: "Zia", desc: "La 'Mamma Cool'",
+                finePrint: [
+                    "Termini: Devi dire a mamma che sono bravo.",
+                    "Valido solo se mi vizi un po'.",
+                    "Niente domande sui voti scolastici.",
+                    "Scadenza: Al prossimo pranzo di famiglia.",
+                    "Include un gossip in omaggio."
+                ],
+                items: [
+                    "Ti spiego come usare le storie di Instagram", "Porto io le buste dello shopping", "Ascolto i tuoi gossip sui parenti", "Non ti chiedo 'quando ti sposi?'", 
+                    "Ti faccio un massaggio al collo", "Ti preparo il caffè quando vieni", "Ti difendo quando mamma ti critica", "Giornata 'Nipote Modello'", 
+                    "Ti aiuto a scegliere il vestito online", "Guardo con te quel reality trash", "Non ti chiedo soldi per 24 ore", "Ti faccio le foto per il profilo", 
+                    "Ti accompagno all'Ikea", "Rispondo subito ai tuoi messaggi", "Ti insegno a mettere i filtri", "Ti faccio un complimento sincero", 
+                    "Non mi lamento del tuo regalo", "Ti offro io la colazione (coi tuoi soldi)", "Ti faccio compagnia mentre cucini", "Ti scarico la musica sul telefono", 
+                    "Ti racconto un segreto (piccolo)", "Abbraccio spontaneo", "Ti lascio il posto sul divano", "Ti faccio i grattini", 
+                    "Vengo a trovarti volentieri", "Ti aiuto a riordinare", "Ti spiego i meme di oggi", "Non ti prendo in giro se non capisci la tecnologia", 
+                    "Ti faccio da 'Cavalerie'/'Dama' di compagnia", "Ti dedico una storia sui social", "Ti presento i miei amici", "Non scappo quando arrivi", 
+                    "Ti ascolto parlare di lavoro", "Ti preparo un aperitivo", "Ti aiuto a montare quel mobile", "Ti cerco il telecomando", 
+                    "Ti ricordo quanto sei giovane", "Ti chiedo consiglio di moda", "Non ti sporco la casa", "Ti mangio tutto quello che cucini", 
+                    "Ti faccio un disegno (anche se sono grande)", "Ti porto a spasso il cane", "Ti annaffio le piante", "Ti configuro la Smart TV", 
+                    "Ti faccio sentire 'Cool'", "Ti ringrazio per i vizi", "Sei la zia preferita (ufficiale)"
+                ]
+            },
+            nonni: {
+                // Giver: Nipote -> Receiver: Nonni
+                color: "bg-emerald-600", lightColor: "bg-emerald-50", darkColor: "bg-emerald-900/40", 
+                textColor: "text-emerald-700",
+                icon: "🧶", title: "Nonni", desc: "Sponsor Ufficiale Cibo",
+                finePrint: [
+                    "Attenzione: Il rifiuto del cibo è reato.",
+                    "Valido per una storia lunga almeno 20 minuti.",
+                    "Non si accettano 'No' come risposta.",
+                    "Termini: Devi dire che sono sciupato.",
+                    "Bonus: Caramella Rossana inclusa."
+                ],
+                items: [
+                    "Lezione Smartphone (con pazienza infinita)", "Ascolto storia 'quando qui era tutta campagna'", "Mangio tutto il pranzo (anche il bis)", 
+                    "Partita a carte (senza barare)", "Ti porto le buste della spesa pesanti", "Sintonizzo i canali TV persi", "Un abbraccio che scrocchia le ossa", 
+                    "Lavoro forzato nell'orto", "Ti leggo i necrologi/giornale", "Pomeriggio senza guardare il telefono", "Caccia al tesoro degli occhiali", 
+                    "Guardo un film in bianco e nero con te", "Ti spiego cos'è il Cloud (nuvola)", "Autista personale per visite/spesa", "Niente 'non ho fame'", 
+                    "Rispondo subito al telefono fisso", "Sorbita foto vacanze dei parenti lontani", "Ti misuro la pressione", "Ti infilo l'ago per cucire", 
+                    "Caffè corretto di nascosto (shhh)", "Andiamo a prendere il gelato", "Non guardo l'orologio mentre parli", "Ti insegno la videochiamata", 
+                    "Ti voglio bene (urlando perché non senti)", "Ascolto consigli non richiesti", "Sgrano piselli per 3 ore", "Ti aiuto a fare la pasta", 
+                    "Ti porto al circolo anziani", "Non ti contraddico per un giorno", "Ti chiedo 'come stai' davvero", "Massaggio alle mani artrosiche", 
+                    "Ti sistemo la radio", "Ti porto i fiori", "Scrivo i messaggi per te", "Ti insegno a mandare vocali", 
+                    "Guardiamo l'album di foto vecchie", "Ti accompagno a fare la passeggiata", "Ti pulisco gli occhiali", "Ti pettino", 
+                    "Accetto la caramella al rabarbaro", "Ti faccio un disegno", "Ascolto la stessa storia per la 100esima volta", "Ti aiuto a camminare", 
+                    "Ti vado a prendere il pane", "Ti ricordo le medicine", "Facciamo le parole crociate insieme", "Ti insegno un gioco nuovo", 
+                    "Ti faccio compagnia in silenzio", "Dormo da te stasera", "Sei la mia eredità preferita"
+                ]
+            },
+            moglie: {
+                // Giver: Marito -> Receiver: Moglie
+                color: "bg-rose-500", lightColor: "bg-rose-50", darkColor: "bg-rose-900/40", 
+                textColor: "text-rose-600",
+                icon: "💍", title: "Moglie", desc: "Ha Sempre Ragione Lei",
+                finePrint: [
+                    "Clausola: Ho sempre ragione io.",
+                    "Valido fino al mio prossimo sbalzo d'umore.",
+                    "Non esclude il buttare la spazzatura.",
+                    "Da riscattare con un bacio.",
+                    "Soddisfatti o... dormi sul divano."
+                ],
+                items: [
+                    "Jolly: Hai Ragione Tu (senza 'ma')", "Massaggio piedi (minimo 15 min)", "Cena cucinata (e io lavo i piatti)", "Film romantico (niente sparatorie)", 
+                    "Uscita libera con le amiche (non ti chiamo)", "Colazione a letto (senza briciole)", "Controllo totale TV stasera", "Bagno caldo (chiuditi a chiave)", 
+                    "Sherpa per shopping (porto e sto zitto)", "Complimenti obbligatori ogni ora", "Gestisco io i figli (auguri a me)", "Weekend senza tua suocera", "Tisana portata sul divano", 
+                    "Ascolto sfoghi (annuisco e basta)", "Niente domande 'dov'è la mia roba?'", "Dittatura del telecomando", "Stiro io la mia camicia", 
+                    "Cucina pulita a specchio", "Dormita extra (bado io ai bimbi)", "Scegli tu il ristorante", "Bacio appassionato (se te lo meriti)", "Ultima fetta di torta è tua", 
+                    "Porto fuori la spazzatura (proattivamente)", "Serata No-Tech (ti parlo)", "Abbraccio infinito", "Ti lascio il cuscino comodo", 
+                    "Ti riscaldo i piedi freddi", "Raccolgo i miei calzini", "Caffè a letto", "Organizzo io la vacanza (tu approvi)", 
+                    "Fiori senza motivo (o ho fatto qualcosa?)", "Ti faccio trovare casa pulita", "Cambio io il rotolo carta igienica", "Ti lascio l'acqua calda doccia", 
+                    "Non russo (ci provo)", "Ti faccio un cocktail", "Guardiamo la tua serie TV", "Ti accompagno dall'estetista", 
+                    "Ti dico che sei magra", "Faccio il pieno all'auto", "Pago io la cena", "Ti lascio stare 1 ora sola", 
+                    "Ti preparo il bagno con le bolle", "Ti faccio i grattini", "Non ti chiedo di cucinare", "Ti porto la colazione al lavoro", 
+                    "Ti scrivo una lettera d'amore", "Ballo un lento con te", "Ti ricordo quanto ti amo", "Jolly: Scusa, sono un idiota"
+                ]
+            },
+            marito: {
+                // Giver: Moglie -> Receiver: Marito
+                color: "bg-slate-600", lightColor: "bg-slate-100", darkColor: "bg-slate-800/40", 
+                textColor: "text-slate-700",
+                icon: "🍺", title: "Marito", desc: "Eroe del Divano",
+                finePrint: [
+                    "Valido solo se hai fatto un lavoretto in casa.",
+                    "Non esenta dalle visite ai parenti.",
+                    "Birra inclusa (se c'è in frigo).",
+                    "Termini: Niente 'Dobbiamo parlare'.",
+                    "Uso limitato: Non tirare troppo la corda."
+                ],
+                items: [
+                    "Serata Libera (fai finta di essere single)", "Jolly: Hai Ragione Tu (incredibile)", "Trono del telecomando (goditelo)", "Niente 'Dobbiamo parlare' oggi", 
+                    "Tuo piatto preferito (colesterolo puro)", "Massaggio schiena (breve)", "Birra gelata portata al Re", "Esenzione lavoretti domestici", 
+                    "Dormita fino a mezzogiorno", "Film d'azione ignorante", "Immunità idraulico (il rubinetto perde domani)", "Ti lascio vincere a Risiko", 
+                    "Colazione da Re (uova e bacon)", "Complimento (finto) sui muscoli", "Esenzione spazzatura (puzzava però)", "Accompagnatore Brico (senza sbuffare)", "Ascolto hobby noioso (fingendo interesse)", 
+                    "Uscita con amici senza meta", "DJ in auto (metti quel rock rumoroso)", "Pizza e Film Violento", "Esenzione parenti (ti salvo io)", "Caffè appena sveglio", 
+                    "1 ora di silenzio zen", "Buono 'Restiamo a casa in mutande'", "Bacio da film (senza alito pesante)", "Ultima birra è tua", "Vestiti come ti pare (anche male)", 
+                    "Panino unto e bisunto", "Guarda i cantieri stradali in pace", "Niente Ikea (grazia ricevuta)", "Complimenti per aver aperto il barattolo", 
+                    "Parla pure sopra la TV", "Lato buono del letto (per stanotte)", "Carne alla brace (falla tu)", "Termostato a temperatura tropicale", 
+                    "Gioca alla Play (fino a che non mi stufo)", "Niente commedie romantiche", "Massaggio al collo", "Colazione servita", 
+                    "Dormi sul divano (con la bava)", "Non ti chiedo a cosa pensi", "Ti faccio trovare la cena pronta", "Lavo io la tua macchina", 
+                    "Ti lascio vincere a Mario Kart", "Usa il mio shampoo costoso", "Stiro io la camicia", "Stai in bagno quanto vuoi (con rivista)", 
+                    "Ti faccio una sorpresa sexy", "Ti dico che sei il migliore", "Giornata 'Uomo di casa'"
+                ]
+            },
+            sorella: {
+                // Giver: Fratello/Sorella -> Receiver: Sorella
+                // CORRETTO: Cose che il fratello/sorella fa PER la sorella
+                color: "bg-purple-500", lightColor: "bg-purple-50", darkColor: "bg-purple-900/40", 
+                textColor: "text-purple-600",
+                icon: "😈", title: "Sorella", desc: "Nemica-Amica Giurata",
+                finePrint: [
+                    "Non valido se mi hai appena rubato qualcosa.",
+                    "Nota: Se lo dici a mamma, nego tutto.",
+                    "Offerta valida salvo litigio tra 5 min.",
+                    "Termini: Segreto di stato.",
+                    "Non cumulabile con insulti precedenti."
+                ],
+                items: [
+                    "Esco dalla tua camera (immediatamente)", "Non tocco i tuoi trucchi/cose", "Ti lascio il bagno libero", "Omertà con genitori (ti copro)", "Ti presto la mia felpa preferita", 
+                    "Ascolto i tuoi drammi amorosi (senza ridere)", "Ti aiuto coi compiti difficili", "Maratona della tua serie TV", "Ti faccio da autista (se ho la patente)", "Tregua prese in giro (1 ora)", 
+                    "Ti porto il tè/bibita", "Ti faccio da Bodyguard", "Ti scatto 100 foto per Instagram", "Karaoke insieme", "Ti cedo l'ultimo dolce", 
+                    "Giuro di non leggere il diario", "Ti aiuto a pulire il casino in camera", "Faccio un TikTok con te", "Ti presto le penne/colori", "Dico a mamma che sei stata brava", 
+                    "Ti lascio il telecomando", "Ti do un passaggio", "Ti regalo uno sticker/gadget", "Serata film nella mia camera", "Ti voglio bene (detto seriamente)", 
+                    "Non faccio la spia (stavolta)", "Ti presto i soldi (pochi)", "Ti accompagno a fare shopping", "Ti difendo da mamma/papà", "Faccio io i piatti al posto tuo", 
+                    "Ti porto la colazione", "Busso prima di entrare", "Ti ascolto lamentarti", "Ti preparo i popcorn", "Guardiamo un film horror (ti proteggo)", 
+                    "Ti aiuto a scegliere l'outfit", "Ti faccio un massaggio", "Non entro in bagno mentre ci sei", "Gossip time (ti ascolto)", "Ti compro le caramelle", 
+                    "Copio i compiti per te", "Ti regalo un accessorio", "Ti lascio il caricabatterie", "Non ti rubo la roba", "Ti faccio un complimento", "Non ti imbarazzo davanti agli amici"
+                ]
+            },
+            fratello: {
+                // Giver: Fratello/Sorella -> Receiver: Fratello
+                // CORRETTO: Cose che il fratello/sorella fa PER il fratello
+                color: "bg-indigo-500", lightColor: "bg-indigo-50", darkColor: "bg-indigo-900/40", 
+                textColor: "text-indigo-600",
+                icon: "👽", title: "Fratello", desc: "L'Erede (di riserva)",
+                finePrint: [
+                    "Attenzione: Se mi batti, spengo la console.",
+                    "Nota: Non dire a mamma che ho detto parolacce.",
+                    "Termini: Alleanza temporanea anti-genitori.",
+                    "Valido solo se mi porti l'acqua.",
+                    "Offerta scade se mi annoio."
+                ],
+                items: [
+                    "Ti presto il videogioco sacro", "Non faccio la spia (costa 5€)", "Esco dalla tua tana (camera)", "Ultima fetta di pizza è tua", "Vinci tu al videogioco (ti lascio)", 
+                    "Non ti copio lo stile", "Prestito soldi (con interessi)", "Ti supero il livello difficile", "Dico che è colpa mia", "Non tocco la tua roba", 
+                    "Ti faccio da spalla online", "Smetto di darti fastidio (10 min)", "Ti faccio un panino", "Caricabatterie ceduto", "Non ti disegno in faccia mentre dormi", 
+                    "Ti difendo dai 'mostri' (o bulli)", "Scegli tu il gioco", "Usa pure il mio tablet", "Non prendo in giro i tuoi capelli", "Alleanza segreta contro tutti", 
+                    "Trovo le cose che perdi", "Ti insegno un trucco", "Dimentico quella cosa imbarazzante", "Tregua armata", "Ti regalo un doppione", 
+                    "Usa il mio PC", "Niente solletico mortale", "Ti porto da bere", "Ti aiuto coi Lego/Costruzioni", "Non ti umilio davanti agli amici", 
+                    "Faccio il portiere (e paro male)", "Lezione di pugni (finti)", "Ti proteggo", "Ti faccio vincere a braccio di ferro", "Ti presto la bici", 
+                    "Tocca pure il joystick", "Ti aiuto se sei nei guai", "Ti copro se rompi qualcosa", "Usa il mio account (non fare danni)", "Skin in regalo", 
+                    "Niente 'gas tossici' in camera", "Scegli la musica (anche se brutta)", "Ti aiuto a fare il nodo alla cravatta", "Ti presto la felpa bella", 
+                    "Non dico a mamma cosa hai fatto", "Ti porto fuori con i miei amici", "Ti insegno a fischiare", "Ti faccio un favore a credito", 
+                    "Saluto da 'bro'", "Ti voglio bene (ma non dirlo)"
+                ]
+            },
+            figlio: {
+                // Giver: Genitore -> Receiver: Figlio
+                color: "bg-orange-500", lightColor: "bg-orange-50", darkColor: "bg-orange-900/40", 
+                textColor: "text-orange-600",
+                icon: "🌪️", title: "Figlio", desc: "Il Campione",
+                finePrint: [
+                    "Nota: I compiti non si fanno da soli.",
+                    "Termini: Lavati i denti o il buono è nullo.",
+                    "Attenzione: Non vale per saltare la scuola.",
+                    "Scadenza: Al primo capriccio serio.",
+                    "Bonus: Abbraccio incluso."
+                ],
+                items: [
+                    "1 ora extra videogiochi", "Nanna posticipata 30' (non crollare)", "Cena senza 'cose verdi'", "Scegli tu (Pizza o Pizza?)", "Salti il lavoretto", 
+                    "Cinema (pagano i vecchi)", "Gelato dimensione illegale", "Tempo insieme (senza sgridate)", "Pancakes a colazione", "Tablet illimitato (finché regge la batteria)", 
+                    "Pacchetto figurine (o ricarica)", "Forte con i cuscini in salotto", "Battaglia Nerf (ti lascio vincere)", "Aiuto livello difficile", "Uscita parco/calcio", 
+                    "Camping in salotto", "DJ in macchina (aiuto)", "Storia extra (lunga)", "Uscita hamburger", "Camera disordinata (chiudo la porta)", 
+                    "Giro avventura", "Lezione 'cose da grandi'", "Cartone preferito in loop", "Sorpresa (non chiedere cosa)", "Abbraccio di gruppo", 
+                    "Salti sul letto (piano)", "Bagno con tanta schiuma", "Ti leggo un fumetto", "Andiamo a vedere le macchine", "Ti compro le caramelle", 
+                    "Non ti pettino oggi", "Ti lascio vincere alla lotta", "Ti porto al McDonald's", "Ti faccio guidare il carrello", "Ti prendo in braccio", 
+                    "Facciamo una gara di corsa", "Ti insegno a fare i nodi", "Ti regalo un giornalino", "Ti faccio usare il telefono (10 min)", 
+                    "Ti faccio il solletico", "Facciamo la pizza insieme", "Ti porto a pescare/camminare", "Ti compro un ovetto", "Guardiamo un film di supereroi", 
+                    "Ti aiuto a costruire un rifugio", "Ti lascio sporcarti di fango", "Ti insegno una parolaccia (piccola)", "Dormi nel lettone", 
+                    "Ti faccio l'aereoplanino", "Ti dico che sei il mio eroe"
+                ]
+            },
+            figlia: {
+                // Giver: Genitore -> Receiver: Figlia
+                color: "bg-cyan-500", lightColor: "bg-cyan-50", darkColor: "bg-cyan-900/40", 
+                textColor: "text-cyan-600",
+                icon: "🦄", title: "Figlia", desc: "La Principessa",
+                finePrint: [
+                    "Nota: Brillantini non rimborsabili.",
+                    "Termini: Valido solo con sorriso da principessa.",
+                    "Attenzione: Papà non può dire di no.",
+                    "Scadenza: All'ora della nanna.",
+                    "Bonus: Coccole extra incluse."
+                ],
+                items: [
+                    "Nanna posticipata 30'", "Scelta dolce serale", "Sessione Arts & Crafts", "Esenzione riordino", "Film Disney a scelta", 
+                    "Parrucchiere personale (papà)", "Uscita solo noi due", "Gelato 3 gusti (ti sbrodoli)", "Biscotti fatti insieme (farina ovunque)", "Cena a scelta (Patatine?)", 
+                    "Doppia storia serale", "Disco dance in salotto", "Esenzione lavoretto", "Pic-nic sul tappeto", "Progetto creativo", 
+                    "Smalto sulle unghie (e sul tavolo)", "Tenda magica", "Gioco libero", "Imparo cose nuove", "Parco preferito", 
+                    "Pigiama tutto il giorno", "Scegli il gioco da tavolo", "Regalino inutile ma bello", "Disegniamo insieme", "Abbraccio stritolante", 
+                    "Trecce storte fatte da papà", "Perline ovunque", "Torta (o disastro)", "Prova i miei tacchi (non cadere)", "Cioccolata calda", 
+                    "Principesse in TV", "Trucca papà", "Sfilata di moda in corridoio", "Quaderno nuovo", "Bagno con troppa schiuma", 
+                    "Favola inventata assurda", "Gita allo zoo", "Braccialetti per tutti", "Brillantini liberi", "Coccole infinite", 
+                    "Dormi con me (calci inclusi)", "Lezione di ballo strambo", "Colazione al bar", "Figurine cute", "Tè delle bambole (finto)", 
+                    "Vestiamo le bambole", "Salti nelle pozzanghere", "Servizio fotografico", "Sei magica", "Cerchietto nuovo"
+                ]
+            }
+        };
+
+        const playSound = (type) => {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination);
+            const now = ctx.currentTime;
+            
+            if (type === 'click') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(600, now); osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'shutter') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(800, now); 
+                gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                osc.start(now); osc.stop(now + 0.08);
+            }
+        };
+
+        const triggerHaptic = () => { if (navigator.vibrate) navigator.vibrate(10); };
+
+        const App = () => {
+            const [category, setCategory] = useState(null);
+            const [index, setIndex] = useState(0);
+            const [darkMode, setDarkMode] = useState(false);
+            const [redeemed, setRedeemed] = useState(false);
+            const [sharing, setSharing] = useState(false);
+            const [barcodeId, setBarcodeId] = useState("000000");
+            const barcodeRef = useRef(null);
+            const cardRef = useRef(null);
+
+            useEffect(() => {
+                if (darkMode) document.documentElement.classList.add('dark');
+                else document.documentElement.classList.remove('dark');
+            }, [darkMode]);
+
+            useEffect(() => {
+                if (category && barcodeRef.current) {
+                    const id = Math.floor(1000000 + Math.random() * 900000).toString();
+                    setBarcodeId(id);
+                    JsBarcode(barcodeRef.current, id, {
+                        format: "CODE128", lineColor: "#000", width: 1.5, height: 40, displayValue: false, background: "#fff"
+                    });
+                }
+            }, [index, category]);
+
+            const handleShare = async () => {
+                if (!cardRef.current) return;
+                setSharing(true);
+                playSound('shutter');
+                triggerHaptic();
+
+                try {
+                    await new Promise(r => setTimeout(r, 100));
+
+                    const canvas = await html2canvas(cardRef.current, {
+                        scale: 2, 
+                        backgroundColor: null,
+                        useCORS: true,
+                        logging: false
+                    });
+
+                    canvas.toBlob(async (blob) => {
+                        if (!blob) throw new Error("Blob creation failed");
+                        
+                        const fileName = `voucher_${category}_${barcodeId}.png`;
+                        const file = new File([blob], fileName, { type: 'image/png' });
+
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            try {
+                                await navigator.share({
+                                    files: [file],
+                                    title: 'Voucher Regalo',
+                                    text: 'Ecco un regalo per te! 🎁'
+                                });
+                            } catch (err) {
+                                if (err.name !== 'AbortError') console.error("Share error:", err);
+                            }
+                        } else {
+                            const link = document.createElement('a');
+                            link.href = URL.createObjectURL(blob);
+                            link.download = fileName;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            alert("Immagine salvata! Inviala manualmente.");
+                        }
+                        setSharing(false);
+                    }, 'image/png');
+
+                } catch (error) {
+                    console.error(error);
+                    alert("Errore nella creazione dell'immagine.");
+                    setSharing(false);
+                }
+            };
+
+            const toggleRedeem = () => { setRedeemed(!redeemed); triggerHaptic(); };
+            const nextCard = () => { setRedeemed(false); setIndex((prev) => (prev + 1) % voucherDB[category].items.length); playSound('click'); };
+            const prevCard = () => { setRedeemed(false); setIndex((prev) => (prev - 1 + voucherDB[category].items.length) % voucherDB[category].items.length); playSound('click'); };
+            const randomCard = () => { setRedeemed(false); setIndex(Math.floor(Math.random() * voucherDB[category].items.length)); playSound('click'); };
+
+            const current = category ? voucherDB[category] : null;
+
+            return (
+                <div className={`min-h-screen flex flex-col items-center justify-center transition-colors duration-300 ${darkMode ? 'bg-slate-950' : 'bg-gray-50'}`}>
+                    
+                    <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                        <div className={`absolute -top-[20%] -left-[20%] w-[70%] h-[70%] rounded-full blur-[100px] opacity-30 ${darkMode ? 'bg-purple-900' : 'bg-pink-200'}`}></div>
+                        <div className={`absolute -bottom-[20%] -right-[20%] w-[70%] h-[70%] rounded-full blur-[100px] opacity-30 ${darkMode ? 'bg-blue-900' : 'bg-blue-200'}`}></div>
+                    </div>
+
+                    <nav className={`w-full z-20 px-6 py-4 flex justify-between items-center sticky top-0 backdrop-blur-md border-b transition-colors ${darkMode ? 'bg-slate-900/80 border-slate-700' : 'bg-white/70 border-gray-200'}`}>
+                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCategory(null)}>
+                            <span className="text-2xl">😈</span>
+                            <h1 className={`font-bold text-xl ${darkMode ? 'text-white' : 'text-gray-900'}`}>Family<span className="opacity-50">Vouchers</span></h1>
+                        </div>
+                        <div className="flex gap-3">
+                            <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-full ${darkMode ? 'bg-slate-800 text-yellow-400' : 'bg-gray-200 text-gray-600'}`}>
+                                {darkMode ? '☀️' : '🌙'}
+                            </button>
+                            {category && (
+                                <button onClick={() => setCategory(null)} className={`px-4 py-2 rounded-full text-sm font-bold border ${darkMode ? 'border-slate-600 text-white' : 'bg-white text-gray-800'}`}>
+                                    Indietro
+                                </button>
+                            )}
+                        </div>
+                    </nav>
+
+                    {sharing && (
+                        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white animate-fade-in">
+                            <div className="text-4xl animate-bounce mb-4">📸</div>
+                            <p className="font-bold">Sto preparando il regalo...</p>
+                        </div>
+                    )}
+
+                    <main className="flex-1 w-full max-w-4xl z-10 p-4 flex flex-col items-center justify-center">
+                        
+                        {!category && (
+                            <div className="w-full animate-fade-in">
+                                <h2 className={`text-center text-4xl font-black mb-8 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Chi vuoi viziare oggi?</h2>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {Object.entries(voucherDB).map(([key, data]) => (
+                                        <button key={key} onClick={() => setCategory(key)} 
+                                            className={`relative overflow-hidden rounded-3xl p-6 text-left transition-transform hover:scale-105 shadow-sm border-2 border-transparent hover:border-black/5
+                                            ${darkMode ? data.darkColor : data.lightColor}
+                                            ${darkMode ? 'hover:border-white/20' : ''}`}>
+                                            <div className="text-4xl mb-4 drop-shadow-md">{data.icon}</div>
+                                            <h3 className={`font-black uppercase ${darkMode ? 'text-white' : data.textColor}`}>{data.title}</h3>
+                                            <p className={`text-xs font-bold opacity-70 ${darkMode ? 'text-white/70' : data.textColor}`}>{data.desc}</p>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {category && current && (
+                            <div className="flex flex-col items-center w-full max-w-sm animate-fade-in">
+                                
+                                <div className="relative w-full aspect-[3/5] perspective-1000 mb-6">
+                                    <div ref={cardRef} className={`relative w-full h-full rounded-[32px] overflow-hidden flex flex-col shadow-2xl border-4 transition-all duration-300 transform
+                                        ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-white'}
+                                        ${redeemed ? 'grayscale opacity-90' : ''}`}
+                                    >
+                                        <div className={`h-[35%] ${current.color} p-6 flex flex-col items-center justify-center text-white relative overflow-hidden`}>
+                                            <div className="absolute top-[-50%] left-[-50%] w-full h-full bg-white/20 rounded-full blur-3xl"></div>
+                                            <div className="text-5xl drop-shadow-lg z-10">{current.icon}</div>
+                                            <h2 className="text-3xl font-black uppercase tracking-widest mt-2 z-10">{current.title}</h2>
+                                            <p className="z-10 text-xs font-bold uppercase opacity-80 mt-1 tracking-wider bg-black/10 px-3 py-1 rounded-full">{current.desc}</p>
+                                        </div>
+
+                                        <div className={`flex-1 flex flex-col items-center justify-center p-6 text-center ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
+                                            
+                                            <div className={`absolute top-[33%] -left-3 w-6 h-6 rounded-full ${darkMode ? 'bg-slate-950' : 'bg-gray-50'}`}></div>
+                                            <div className={`absolute top-[33%] -right-3 w-6 h-6 rounded-full ${darkMode ? 'bg-slate-950' : 'bg-gray-50'}`}></div>
+
+                                            <div className="flex-1 flex flex-col items-center justify-center">
+                                                <h3 className={`text-2xl md:text-3xl font-black leading-tight mb-4 ${darkMode ? 'text-white' : current.textColor}`}>
+                                                    "{current.items[index]}"
+                                                </h3>
+                                                
+                                                <p className={`text-xs md:text-sm font-medium italic opacity-70 px-4 ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                                    {current.finePrint[index % current.finePrint.length]}
+                                                </p>
+                                            </div>
+
+                                            <div className="mt-auto w-full bg-white p-3 rounded-xl flex flex-col items-center shadow-sm">
+                                                <div className="flex justify-between w-full text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
+                                                    <span>Validità: ∞</span>
+                                                    <span>ID: {barcodeId.substring(0,4)}</span>
+                                                </div>
+                                                <canvas ref={barcodeRef} className="h-10 w-full"></canvas>
+                                            </div>
+
+                                            {redeemed && (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-[2px] z-20">
+                                                    <div className="border-[6px] border-red-600 text-red-600 font-black text-4xl px-4 py-2 transform -rotate-12 bg-white rounded-xl shadow-2xl">
+                                                        USATO
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="w-full space-y-3">
+                                    <div className="flex gap-3">
+                                        <button onClick={prevCard} className={`p-4 rounded-2xl shadow-sm border ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-100'}`}>⬅️</button>
+                                        <button onClick={toggleRedeem} className={`flex-1 rounded-2xl font-bold text-lg shadow-lg ${darkMode ? 'bg-white text-black' : 'bg-black text-white'}`}>
+                                            {redeemed ? '↺ Ripristina' : '✅ Usa Ora'}
+                                        </button>
+                                        <button onClick={nextCard} className={`p-4 rounded-2xl shadow-sm border ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-100'}`}>➡️</button>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button onClick={randomCard} className={`p-3 rounded-2xl font-bold text-sm border shadow-sm ${darkMode ? 'bg-slate-800 border-slate-700 text-purple-400' : 'bg-white border-gray-100 text-purple-600'}`}>
+                                            🎲 Pesca Random
+                                        </button>
+                                        <button onClick={handleShare} className={`p-3 rounded-2xl font-bold text-sm border shadow-sm ${darkMode ? 'bg-slate-800 border-slate-700 text-blue-400' : 'bg-white border-gray-100 text-blue-600'}`}>
+                                            📤 Condividi
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
+
