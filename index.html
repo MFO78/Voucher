@@ -6,18 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Family Vouchers</title>
     
-    <!-- 1. CORE REACT -->
+    <!-- LIBRERIE CORE -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- 2. STILE -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 3. LIBRERIE UTILI -->
-    <!-- QRIOUS per generazione QR robusta -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-    <!-- HTML2Canvas per screenshot -->
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
     <script>
@@ -45,11 +39,8 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- URL DI PRODUZIONE (FONDAMENTALE PER LA SCANSIONE) ---
-        const APP_URL = "https://mfo78.github.io/Voucher/";
-
-        // --- DATABASE LOCALE (Browser Storage) ---
-        const DB_KEY = 'FV_LEDGER_V5'; 
+        // --- DATABASE LOCALE ---
+        const DB_KEY = 'FV_LEDGER_V5';
         
         const getLedger = () => {
             try { return JSON.parse(localStorage.getItem(DB_KEY) || '{}'); } catch { return {}; }
@@ -78,44 +69,46 @@
                 title: "Family", sub: "Vouchers", back: "Indietro",
                 home: "Chi vuoi viziare (o raddrizzare)?",
                 validity: "Validità: Una Tantum",
-                scan: "SCANSIONA PER RISCUOTERE",
-                redeemBtn: "✅ CONVALIDA ORA",
-                usedTitle: "⛔ GIÀ UTILIZZATO IL:",
-                resetBtn: "🔄 Riabilita (Reset)",
+                scan: "SCANSIONA",
+                redeemBtn: "Convalida", // Semplificato
+                validatedTitle: "✅ CONVALIDATO", // Nuovo stato positivo
+                validatedDate: "in data:",
+                resetBtn: "Reset (Debug)",
                 share: "Salva Immagine",
                 random: "🎲 Random",
                 saved: "Immagine salvata!",
                 err: "Errore immagine.",
                 modeScan: "MODALITÀ RICEZIONE",
-                instrTitle: "Istruzioni per l'Uso",
+                instrTitle: "Istruzioni",
                 instrBody: [
-                    "1. Selezionare un voucher e mostrare il QR Code generato.",
-                    "2. Scansionare il codice con la fotocamera del dispositivo ricevente.",
-                    "3. Premere 'CONVALIDA' sullo schermo per confermare l'utilizzo.",
-                    "4. Il dispositivo memorizzerà localmente che il codice è stato usato.",
-                    "5. Tentativi successivi di scansione mostreranno lo stato 'GIÀ UTILIZZATO'."
+                    "1. Selezionare il voucher e generare il QR.",
+                    "2. Scansionare con il dispositivo ricevente.",
+                    "3. Premere 'Convalida' per confermare.",
+                    "4. Apparirà la scritta verde 'CONVALIDATO'.",
+                    "5. Il voucher non potrà essere riutilizzato."
                 ]
             },
             en: {
                 title: "Family", sub: "Vouchers", back: "Back",
-                home: "Who to spoil (or punish)?",
+                home: "Who to spoil?",
                 validity: "Validity: One Time",
-                scan: "SCAN TO REDEEM",
-                redeemBtn: "✅ VALIDATE NOW",
-                usedTitle: "⛔ ALREADY USED ON:",
-                resetBtn: "🔄 Reactivate (Reset)",
+                scan: "SCAN",
+                redeemBtn: "Validate",
+                validatedTitle: "✅ VALIDATED",
+                validatedDate: "on:",
+                resetBtn: "Reset (Debug)",
                 share: "Save Image",
                 random: "🎲 Random",
-                saved: "Image saved!",
-                err: "Image Error.",
+                saved: "Saved!",
+                err: "Error.",
                 modeScan: "RECEIVER MODE",
-                instrTitle: "How to Use",
+                instrTitle: "Instructions",
                 instrBody: [
-                    "1. Select a voucher and display the generated QR Code.",
-                    "2. Scan the code using the recipient's device camera.",
-                    "3. Tap 'VALIDATE' on the screen to confirm redemption.",
-                    "4. The device will locally record the code as used.",
-                    "5. Subsequent scans of the same QR will display 'ALREADY USED'."
+                    "1. Select voucher and generate QR.",
+                    "2. Scan with recipient device.",
+                    "3. Press 'Validate' to confirm.",
+                    "4. Green 'VALIDATED' text will appear.",
+                    "5. Voucher cannot be reused."
                 ]
             }
         };
@@ -123,7 +116,7 @@
         // --- DATABASE VOUCHER ---
         const voucherDB = {
             mamma: {
-                color: "bg-pink-500", lightColor: "bg-pink-50", darkColor: "bg-pink-900/40", textColor: "text-pink-600", icon: "👑", 
+                color: "bg-pink-500", lightColor: "bg-pink-50", darkColor: "bg-pink-900/40", textColor: "text-pink-600", icon: "👑",
                 content: {
                     it: { title: "Mamma", desc: "Regina", finePrint: ["La ragione è mia."], items: ["Abbraccio rigenerante", "Niente lamentele 1h", "Riordino camera", "Colazione a letto", "Tu scegli il film", "Aiuto cucina", "Giornata 'Hai Ragione Tu'", "Ascolto attivo", "Complimento sincero", "Tregua conflitti", "Servizio taxi", "Caffè con amore", "Dichiarazione affetto", "Compiti no drammi", "Massaggio relax", "Uscita gelato", "Annaffio piante", "Niente 'cosa si mangia'", "Letto rifatto", "Ritiro panni", "Ti insegno App", "Shopping insieme", "Svuoto lavastoviglie", "Un bacio", "Spa Casalinga"] },
                     en: { title: "Mom", desc: "Queen", finePrint: ["I am right."], items: ["Hug", "No complaints", "Clean room", "Breakfast in bed", "Pick movie", "Kitchen help", "You are Right day", "Listening", "Compliment", "Truce", "Taxi", "Coffee", "Affection", "Homework", "Massage", "Ice cream", "Plants", "No food Qs", "Bed made", "Laundry", "App help", "Shopping", "Dishwasher", "Kiss", "Spa"] }
@@ -137,8 +130,11 @@
                 }
             },
             zia: {
-                color: "bg-fuchsia-500", lightColor: "bg-fuchsia-50", darkColor: "bg-fuchsia-900/40", textColor: "text-fuchsia-600", icon: "👜", 
-                content: { it: { title: "Zia", desc: "Cool", finePrint: ["Vizi inclusi."], items: ["Instagram Help", "Buste shopping", "Ascolto gossip", "No 'matrimonio?'", "Massaggio collo", "Caffè pronto", "Difesa da mamma", "Nipote Modello", "Outfit online", "Reality trash", "No soldi 24h", "Foto profilo", "Ikea", "Risposta chat", "Filtri foto", "Complimento", "No lamentele", "Offro colazione", "Compagnia cucina", "Scarico musica", "Segreto", "Abbraccio", "Posto divano", "Grattini", "Visita"] }, en: { title: "Aunt", desc: "Cool", finePrint: ["Spoiling inc."], items: ["Insta Help", "Bags", "Gossip", "No marriage Qs", "Massage", "Coffee", "Defense", "Model Kid", "Outfit", "Trash TV", "No money", "Photo", "Ikea", "Chat", "Filters", "Compliment", "No complaints", "Breakfast", "Kitchen", "Music", "Secret", "Hug", "Sofa", "Scratch", "Visit"] } }
+                color: "bg-fuchsia-500", lightColor: "bg-fuchsia-50", darkColor: "bg-fuchsia-900/40", textColor: "text-fuchsia-600", icon: "👜",
+                content: {
+                    it: { title: "Zia", desc: "Cool", finePrint: ["Vizi inclusi."], items: ["Instagram Help", "Buste shopping", "Ascolto gossip", "No 'matrimonio?'", "Massaggio collo", "Caffè pronto", "Difesa da mamma", "Nipote Modello", "Outfit online", "Reality trash", "No soldi 24h", "Foto profilo", "Ikea", "Risposta chat", "Filtri foto", "Complimento", "No lamentele", "Offro colazione", "Compagnia cucina", "Scarico musica", "Segreto", "Abbraccio", "Posto divano", "Grattini", "Visita"] },
+                    en: { title: "Aunt", desc: "Cool", finePrint: ["Spoiling inc."], items: ["Insta Help", "Bags", "Gossip", "No marriage Qs", "Massage", "Coffee", "Defense", "Model Kid", "Outfit", "Trash TV", "No money", "Photo", "Ikea", "Chat", "Filters", "Compliment", "No complaints", "Breakfast", "Kitchen", "Music", "Secret", "Hug", "Sofa", "Scratch", "Visit"] }
+                }
             },
             nonni: {
                 color: "bg-emerald-600", lightColor: "bg-emerald-50", darkColor: "bg-emerald-900/40", textColor: "text-emerald-700", icon: "🧶",
@@ -235,7 +231,6 @@
             const [lang, setLang] = useState('it');
             const [showInfo, setShowInfo] = useState(false);
             
-            // LOGICA SCANNER
             const [isScannerMode, setIsScannerMode] = useState(false);
             const [redemptionData, setRedemptionData] = useState(null);
             const [stableId, setStableId] = useState("");
@@ -255,7 +250,7 @@
                     const safeIdx = Math.max(0, Math.min(parseInt(urlIdx), voucherDB[urlCat].content['it'].items.length - 1));
                     setIndex(safeIdx);
                     
-                    const id = `${urlCat}-${safeIdx}`; // STABLE ID
+                    const id = `${urlCat}-${safeIdx}`; 
                     setStableId(id);
 
                     const status = checkRedemption(id);
@@ -273,9 +268,7 @@
             // 2. GENERATE QR (Only if generating)
             useEffect(() => {
                 if (!isScannerMode && category && qrRef.current && window.QRious) {
-                    // Costruiamo il link. NOTA BENE: Se la pagina non è nella root, serve il percorso completo
-                    // Usiamo APP_URL definito sopra o window.location
-                    const baseUrl = APP_URL.endsWith('/') ? APP_URL : APP_URL + '/';
+                    const baseUrl = window.location.href.split('?')[0];
                     const deepLink = `${baseUrl}?c=${category}&i=${index}`;
                     
                     try {
@@ -325,7 +318,6 @@
             };
 
             const toggleLang = () => setLang(prev => prev === 'it' ? 'en' : 'it');
-            
             const currentData = category ? voucherDB[category] : null;
             const currentContent = currentData ? currentData.content[lang] : null;
 
@@ -401,12 +393,12 @@
 
                                             <div className="mt-auto w-full bg-gray-50 dark:bg-slate-900 p-4 rounded-xl flex flex-col items-center shadow-sm min-h-[160px] justify-center">
                                                 
-                                                {/* STATO 1: GIA' USATO */}
+                                                {/* STATO 1: GIA' USATO O APPENA CONVALIDATO */}
                                                 {redemptionData ? (
                                                     <div className="text-center w-full animate-bounce-short">
-                                                        <div className="text-red-500 text-6xl mb-2">⛔</div>
-                                                        <p className="font-bold text-red-600 text-xs tracking-widest mb-1">{uiText[lang].usedTitle}</p>
-                                                        <p className="text-[10px] text-gray-500 font-mono mb-4">{new Date(redemptionData.date).toLocaleDateString()} {new Date(redemptionData.date).toLocaleTimeString()}</p>
+                                                        <div className={`text-6xl mb-2 ${redemptionData.redeemed ? 'text-green-500' : 'text-red-500'}`}>{redemptionData.redeemed ? '✅' : '⛔'}</div>
+                                                        <p className={`font-bold text-xs tracking-widest mb-1 ${redemptionData.redeemed ? 'text-green-600' : 'text-red-600'}`}>{uiText[lang].validatedTitle}</p>
+                                                        <p className="text-[10px] text-gray-500 font-mono mb-4">{uiText[lang].validatedDate} {new Date(redemptionData.date).toLocaleDateString()}</p>
                                                         
                                                         {isScannerMode && (
                                                             <button onClick={handleReset} className="w-full py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-sm rounded-lg transition-colors">
@@ -415,7 +407,7 @@
                                                         )}
                                                     </div>
                                                 ) : (
-                                                    /* STATO 2: SCANNER MODE */
+                                                    /* STATO 2: SCANNER MODE (VALIDA) */
                                                     isScannerMode ? (
                                                         <button 
                                                             onClick={handleValidate}
@@ -466,5 +458,4 @@
     </script>
 </body>
 </html>
-
 
