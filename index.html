@@ -4,22 +4,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Family Vouchers - Ledger Edition</title>
+    <title>Family Vouchers - Final</title>
     
-    <!-- React & ReactDOM -->
+    <!-- 1. CORE REACT -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    
-    <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Tailwind CSS -->
+    <!-- 2. STILE -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- QRCode Lib -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-    <!-- html2canvas -->
+    <!-- 3. LIBRERIE ESTERNE -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
     <script>
@@ -28,7 +24,7 @@
             theme: {
                 extend: {
                     fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['Roboto Mono', 'monospace'] },
-                    animation: { 'bounce-short': 'bounce 0.5s infinite', 'fade-in': 'fadeIn 0.3s ease-out' },
+                    animation: { 'bounce-short': 'bounce 0.5s infinite', 'fade-in': 'fadeIn 0.5s ease-out' },
                     keyframes: { fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } } }
                 }
             }
@@ -47,18 +43,16 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- LOCAL STORAGE MANAGER ---
-        const DB_KEY = 'FAMILY_VOUCHERS_LEDGER_V1';
+        // --- GESTIONE DATABASE LOCALE (LEDGER) ---
+        const DB_KEY = 'FAMILY_VOUCHERS_LEDGER_V3';
         
         const getLedger = () => {
-            try {
-                return JSON.parse(localStorage.getItem(DB_KEY) || '{}');
-            } catch { return {}; }
+            try { return JSON.parse(localStorage.getItem(DB_KEY) || '{}'); } catch { return {}; }
         };
 
-        const saveToLedger = (id, data) => {
+        const saveRedemption = (id) => {
             const db = getLedger();
-            db[id] = { ...data, timestamp: new Date().toISOString() };
+            db[id] = { redeemed: true, date: new Date().toISOString() };
             localStorage.setItem(DB_KEY, JSON.stringify(db));
         };
 
@@ -67,116 +61,200 @@
             return db[id] || null;
         };
 
-        // --- TRANSLATIONS ---
+        const resetRedemption = (id) => {
+            const db = getLedger();
+            delete db[id];
+            localStorage.setItem(DB_KEY, JSON.stringify(db));
+        };
+
+        // --- TESTI ---
         const uiText = {
             it: {
-                title: "Vouchers", subtitle: "Family", back: "Indietro", homeTitle: "Chi vuoi viziare?",
-                voucherCount: "Buono", validity: "Validità: ∞", redeemed: "RISCOSSO",
-                restore: "↺ Reset (Debug)", use: "✅ CONVALIDA ORA", random: "🎲 Pesca Random", share: "📤 Invia",
-                loading: "Generazione...", saved: "Salvato!", error: "Errore.",
-                scanMe: "SCANSIONA PER RISCUOTERE",
-                instructionsTitle: "Come Funziona",
-                instructions: [
-                    "1. Seleziona un Voucher per la vittima.",
-                    "2. Mostra il QR Code al destinatario.",
-                    "3. Il destinatario scansiona col suo telefono.",
-                    "4. Il destinatario preme 'CONVALIDA' sul suo schermo.",
-                    "5. Il browser del destinatario ricorderà che quel buono è stato usato!"
-                ],
-                alreadyUsed: "⛔ GIÀ UTILIZZATO IL:",
-                scannerMode: "MODALITÀ VERIFICA"
+                title: "Family", sub: "Vouchers", back: "Indietro",
+                home: "Chi vuoi viziare (o punire)?",
+                validity: "Validità: Una Tantum",
+                scan: "SCANSIONAMI",
+                redeemBtn: "✅ CONVALIDA UTILIZZO",
+                usedTitle: "⛔ GIÀ UTILIZZATO IL:",
+                resetBtn: "🔄 Riabilita (Reset)",
+                share: "📸 Salva Immagine",
+                random: "🎲 Random",
+                saved: "Immagine salvata! Inviala manualmente.",
+                err: "Errore immagine. Riprova.",
+                modeScan: "MODALITÀ RICEZIONE",
+                instrTitle: "Istruzioni per l'Uso",
+                instrBody: [
+                    "1. Selezionare un voucher e mostrare il QR Code generato.",
+                    "2. Scansionare il codice con la fotocamera del dispositivo ricevente.",
+                    "3. Premere 'CONVALIDA' sullo schermo per confermare l'utilizzo.",
+                    "4. Il dispositivo memorizzerà localmente che il codice è stato usato.",
+                    "5. Tentativi successivi di scansione mostreranno lo stato 'GIÀ UTILIZZATO'."
+                ]
             },
             en: {
-                title: "Vouchers", subtitle: "Family", back: "Back", homeTitle: "Who to spoil?",
-                voucherCount: "Voucher", validity: "Validity: ∞", redeemed: "REDEEMED",
-                restore: "↺ Reset (Debug)", use: "✅ VALIDATE NOW", random: "🎲 Random Pick", share: "📤 Share",
-                loading: "Loading...", saved: "Saved!", error: "Error.",
-                scanMe: "SCAN TO REDEEM",
-                instructionsTitle: "How it Works",
-                instructions: [
-                    "1. Select a Voucher for the victim.",
-                    "2. Show the QR Code to the recipient.",
-                    "3. Recipient scans it with their phone.",
-                    "4. Recipient clicks 'VALIDATE' on their screen.",
-                    "5. Recipient's browser remembers it's used!"
-                ],
-                alreadyUsed: "⛔ ALREADY USED ON:",
-                scannerMode: "VERIFICATION MODE"
+                title: "Family", sub: "Vouchers", back: "Back",
+                home: "Who to spoil (or punish)?",
+                validity: "Validity: One Time",
+                scan: "SCAN ME",
+                redeemBtn: "✅ VALIDATE USE",
+                usedTitle: "⛔ ALREADY USED ON:",
+                resetBtn: "🔄 Reactivate (Reset)",
+                share: "📸 Save Image",
+                random: "🎲 Random",
+                saved: "Image saved!",
+                err: "Image Error",
+                modeScan: "RECEIVER MODE",
+                instrTitle: "How to Use",
+                instrBody: [
+                    "1. Select a voucher and display the generated QR Code.",
+                    "2. Scan the code using the recipient's device camera.",
+                    "3. Tap 'VALIDATE' on the screen to confirm redemption.",
+                    "4. The device will locally record the code as used.",
+                    "5. Subsequent scans of the same QR will display 'ALREADY USED'."
+                ]
             }
         };
 
-        // --- DATABASE ---
-        // (Database ridotto per brevità nell'esempio, ma include la struttura completa nel file reale)
+        // --- DATABASE VOUCHER ---
         const voucherDB = {
             mamma: {
-                color: "bg-pink-500", lightColor: "bg-pink-50", darkColor: "bg-pink-900/40", textColor: "text-pink-600", icon: "👑", 
+                color: "bg-pink-500", lightColor: "bg-pink-50", darkColor: "bg-pink-900/40", textColor: "text-pink-600", icon: "👑",
                 content: {
-                    it: { title: "Mamma", desc: "Regina", finePrint: ["Termini: La ragione è mia."], items: ["Abbraccio rigenerante", "Niente lamentele", "Riordino camera", "Colazione a letto", "Tu scegli il film", "Aiuto cucina", "Giornata 'Hai Ragione Tu'", "Ascolto attivo", "Complimento sincero", "Tregua conflitti", "Servizio taxi", "Caffè con amore", "Dichiarazione affetto", "Compiti no drammi", "Massaggio relax", "Uscita gelato", "Annaffio piante", "Niente 'cosa si mangia'", "Letto rifatto", "Ritiro panni", "Ti insegno App", "Shopping insieme", "Svuoto lavastoviglie", "Un bacio", "Spa Casalinga"] },
-                    en: { title: "Mom", desc: "Queen", finePrint: ["Terms: I am right."], items: ["Hug", "No complaints", "Clean room", "Breakfast in bed", "Pick movie", "Kitchen help", "Day 'You Right'", "Listening", "Compliment", "Truce", "Taxi", "Coffee", "Affection", "Homework", "Massage", "Ice cream", "Plants", "No food questions", "Bed made", "Laundry", "Tech help", "Shopping", "Dishwasher", "Kiss", "Spa"] }
+                    it: { title: "Mamma", desc: "Regina", finePrint: ["La ragione è mia."], items: ["Abbraccio rigenerante", "Niente lamentele 1h", "Riordino camera", "Colazione a letto", "Tu scegli il film", "Aiuto cucina", "Giornata 'Hai Ragione Tu'", "Ascolto attivo", "Complimento sincero", "Tregua conflitti", "Servizio taxi", "Caffè con amore", "Dichiarazione affetto", "Compiti no drammi", "Massaggio relax", "Uscita gelato", "Annaffio piante", "Niente 'cosa si mangia'", "Letto rifatto", "Ritiro panni", "Ti insegno App", "Shopping insieme", "Svuoto lavastoviglie", "Un bacio", "Spa Casalinga"] },
+                    en: { title: "Mom", desc: "Queen", finePrint: ["I am right."], items: ["Hug", "No complaints", "Clean room", "Breakfast in bed", "Pick movie", "Kitchen help", "You are Right day", "Listening", "Compliment", "Truce", "Taxi", "Coffee", "Affection", "Homework", "Massage", "Ice cream", "Plants", "No food Qs", "Bed made", "Laundry", "App help", "Shopping", "Dishwasher", "Kiss", "Spa"] }
                 }
             },
             papa: {
                 color: "bg-blue-600", lightColor: "bg-blue-50", darkColor: "bg-blue-900/40", textColor: "text-blue-600", icon: "👔",
                 content: {
                     it: { title: "Papà", desc: "Boss", finePrint: ["Batterie escluse."], items: ["Bibita divano", "Telecomando", "No soldi", "Lavaggio auto", "Documentario", "Silenzio pisolino", "Segreto", "Lezione vita", "Abbraccio virile", "Facchino spesa", "Rispetto attrezzi", "Vittoria carte", "Risata finta", "Lotta", "Snack", "Jolly Ragione", "Torcia", "Bici", "Detox", "Ritratto", "No capricci", "Occhiali persi", "Biscotto", "Selfie", "Forza"] },
-                    en: { title: "Dad", desc: "Boss", finePrint: ["Batteries not inc."], items: ["Drink sofa", "Remote", "No money", "Car wash", "Documentary", "Nap silence", "Secret", "Life lesson", "Manly hug", "Porter", "Tools", "Card win", "Fake laugh", "Wrestle", "Snack", "Joker Right", "Flashlight", "Bike", "Detox", "Portrait", "No tantrums", "Glasses", "Cookie", "Selfie", "Strength"] }
+                    en: { title: "Dad", desc: "Boss", finePrint: ["Batteries not inc."], items: ["Drink", "Remote", "No money", "Car wash", "Docu", "Nap", "Secret", "Lecture", "Hug", "Porter", "Tools", "Card win", "Fake laugh", "Wrestle", "Snack", "Joker", "Flashlight", "Bike", "Detox", "Portrait", "No tantrums", "Glasses", "Cookie", "Selfie", "Strength"] }
                 }
             },
-            // ... (Altre categorie mantenute identiche alla versione precedente per brevità del blocco codice)
-             zia: {
-                color: "bg-fuchsia-500", lightColor: "bg-fuchsia-50", darkColor: "bg-fuchsia-900/40", textColor: "text-fuchsia-600", icon: "👜", 
-                content: { it: { title: "Zia", desc: "Cool", finePrint: ["Vizi inclusi."], items: ["Instagram Help", "Shopping bags", "Gossip", "No domande", "Massaggio", "Caffè", "Difesa", "Nipote Modello", "Outfit", "Trash TV", "No soldi", "Foto", "Ikea", "Chat fast", "Filtri", "Complimento", "No lamentele", "Colazione", "Cucina", "Musica", "Segreto", "Abbraccio", "Divano", "Grattini", "Visita"] }, en: { title: "Aunt", desc: "Cool", finePrint: ["Spoiling inc."], items: ["Insta Help", "Bags", "Gossip", "No Qs", "Massage", "Coffee", "Defense", "Model Kid", "Outfit", "Trash TV", "No money", "Photo", "Ikea", "Chat", "Filters", "Compliment", "No complaints", "Breakfast", "Kitchen", "Music", "Secret", "Hug", "Sofa", "Scratch", "Visit"] } }
+            zia: {
+                color: "bg-fuchsia-500", lightColor: "bg-fuchsia-50", darkColor: "bg-fuchsia-900/40", textColor: "text-fuchsia-600", icon: "👜",
+                content: {
+                    it: { title: "Zia", desc: "Cool", finePrint: ["Vizi inclusi."], items: ["Instagram Help", "Buste shopping", "Ascolto gossip", "No 'matrimonio?'", "Massaggio collo", "Caffè pronto", "Difesa da mamma", "Nipote Modello", "Outfit online", "Reality trash", "No soldi 24h", "Foto profilo", "Ikea", "Risposta chat", "Filtri foto", "Complimento", "No lamentele", "Offro colazione", "Compagnia cucina", "Scarico musica", "Segreto", "Abbraccio", "Posto divano", "Grattini", "Visita"] },
+                    en: { title: "Aunt", desc: "Cool", finePrint: ["Spoiling inc."], items: ["Insta Help", "Bags", "Gossip", "No marriage Qs", "Massage", "Coffee", "Defense", "Model Kid", "Outfit", "Trash TV", "No money", "Photo", "Ikea", "Chat", "Filters", "Compliment", "No complaints", "Breakfast", "Kitchen", "Music", "Secret", "Hug", "Sofa", "Scratch", "Visit"] }
+                }
             },
-            nonni: { color: "bg-emerald-600", lightColor: "bg-emerald-50", darkColor: "bg-emerald-900/40", textColor: "text-emerald-700", icon: "🧶", content: { it: { title: "Nonni", desc: "Cibo", finePrint: ["Mangia tutto."], items: ["Smartphone", "Storia", "Mangio tutto", "Carte", "Borse", "TV", "Abbraccio", "Orto", "Giornale", "No telefono", "Occhiali", "Film B/N", "Cloud", "Autista", "Ho fame", "Telefono", "Foto", "Pressione", "Ago", "Caffè", "Gelato", "Ascolto", "Videochiamata", "Bene", "Consigli"] }, en: { title: "Grandparents", desc: "Food", finePrint: ["Eat all."], items: ["Smartphone", "Story", "Eat all", "Cards", "Bags", "TV", "Hug", "Garden", "News", "No phone", "Glasses", "BW Movie", "Cloud", "Driver", "Hungry", "Phone", "Photos", "Pressure", "Needle", "Coffee", "Ice cream", "Listen", "Video call", "Love", "Advice"] } } },
-            moglie: { color: "bg-rose-500", lightColor: "bg-rose-50", darkColor: "bg-rose-900/40", textColor: "text-rose-600", icon: "💍", content: { it: { title: "Moglie", desc: "Ragione", finePrint: ["Ho ragione."], items: ["Jolly Ragione", "Massaggio piedi", "Cena", "Film romantico", "Uscita amiche", "Colazione letto", "TV", "Bagno", "Shopping", "Complimenti", "Figli", "No suocera", "Tisana", "Sfoghi", "Dov'è roba", "Telecomando", "Stiro", "Cucina", "Dormita", "Ristorante", "Bacio", "Torta", "Spazzatura", "No Tech", "Abbraccio"] }, en: { title: "Wife", desc: "Right", finePrint: ["I'm right."], items: ["Joker Right", "Feet", "Dinner", "Movie", "Girls night", "Breakfast", "TV", "Bath", "Shopping", "Compliments", "Kids", "No in-laws", "Tea", "Vent", "Stuff", "Remote", "Iron", "Kitchen", "Sleep", "Restaurant", "Kiss", "Cake", "Trash", "No Tech", "Hug"] } } },
-            marito: { color: "bg-slate-600", lightColor: "bg-slate-100", darkColor: "bg-slate-800/40", textColor: "text-slate-700", icon: "🍺", content: { it: { title: "Marito", desc: "Divano", finePrint: ["Birra inc."], items: ["Serata", "Jolly Ragione", "Telecomando", "No parlare", "Piatto", "Schiena", "Birra", "No lavori", "Dormita", "Azione", "Idraulico", "Risiko", "Colazione", "Muscoli", "Spazzatura", "Brico", "Hobby", "Amici", "DJ", "Pizza", "No parenti", "Caffè", "Silenzio", "Casa", "Bacio"] }, en: { title: "Husband", desc: "Sofa", finePrint: ["Beer inc."], items: ["Night out", "Joker Right", "Remote", "No talk", "Meal", "Back", "Beer", "No chores", "Sleep", "Action", "Plumber", "Risk", "Breakfast", "Muscles", "Trash", "Hardware", "Hobby", "Friends", "DJ", "Pizza", "No kin", "Coffee", "Silence", "Home", "Kiss"] } } },
-            figlio: { color: "bg-orange-500", lightColor: "bg-orange-50", darkColor: "bg-orange-900/40", textColor: "text-orange-600", icon: "🌪️", content: { it: { title: "Figlio", desc: "Campione", finePrint: ["Lava denti."], items: ["Videogiochi", "Nanna", "No verdure", "Menu", "No lavoretto", "Cinema", "Gelato", "Tempo", "Pancakes", "Tablet", "Figurine", "Cuscini", "Nerf", "Livello", "Parco", "Campeggio", "DJ", "Storia", "Hamburger", "Camera", "Giro", "Lezione", "Cartone", "Sorpresa", "Abbraccio"] }, en: { title: "Son", desc: "Champ", finePrint: ["Brush teeth."], items: ["Games", "Bedtime", "No veg", "Menu", "No chore", "Movie", "Ice cream", "Time", "Pancakes", "Tablet", "Stickers", "Pillows", "Nerf", "Level", "Park", "Camping", "DJ", "Story", "Burger", "Room", "Trip", "Lesson", "Cartoon", "Surprise", "Hug"] } } },
-            figlia: { color: "bg-cyan-500", lightColor: "bg-cyan-50", darkColor: "bg-cyan-900/40", textColor: "text-cyan-600", icon: "🦄", content: { it: { title: "Figlia", desc: "Principessa", finePrint: ["Sorriso."], items: ["Nanna", "Dolce", "Creativo", "No riordino", "Disney", "Parrucchiere", "Uscita", "Gelato", "Biscotti", "Cena", "Storia", "Disco", "No lavoretti", "Pic-nic", "Progetto", "Smalto", "Tenda", "Gioco", "Imparo", "Parco", "Pigiama", "Gioco tavolo", "Regalo", "Disegno", "Abbraccio"] }, en: { title: "Daughter", desc: "Princess", finePrint: ["Smile."], items: ["Bedtime", "Sweet", "Creative", "No clean", "Disney", "Hair", "Outing", "Ice cream", "Cookies", "Dinner", "Story", "Disco", "No chores", "Picnic", "Project", "Nail", "Tent", "Game", "Learn", "Park", "Pajama", "Board game", "Gift", "Draw", "Hug"] } } },
-            punizione_figlio: { color: "bg-yellow-600", lightColor: "bg-yellow-50", darkColor: "bg-yellow-900/40", textColor: "text-yellow-700", icon: "🚧", content: { it: { title: "Punizione", desc: "Reality", finePrint: ["Subito."], items: ["No Video", "Piatti", "Spazzatura", "Camera", "No WiFi", "Tavola", "Scarpe", "Cucina", "No uscita", "Sveglia", "Letto", "Aspirapolvere", "No cuffie", "Scusa", "Abbraccio", "Libro", "Cane", "No dolci", "Nonna", "Lavastoviglie", "Vetri", "No TV", "Studio", "No Calcio", "Compiti"] }, en: { title: "Penalty", desc: "Reality", finePrint: ["Now."], items: ["No Video", "Dishes", "Trash", "Room", "No WiFi", "Table", "Shoes", "Cook", "No out", "Wake up", "Bed", "Vacuum", "No phones", "Sorry", "Hug", "Book", "Dog", "No sweet", "Grandma", "Dishwasher", "Windows", "No TV", "Study", "No Soccer", "Homework"] } } },
-            punizione_figlia: { color: "bg-red-600", lightColor: "bg-red-50", darkColor: "bg-red-900/40", textColor: "text-red-700", icon: "📵", content: { it: { title: "Punizione", desc: "Detox", finePrint: ["Silenzio."], items: ["No Social", "Bagno", "No trucco", "Armadio", "Stendere", "No telefono", "Tavola", "No specchio", "Studio", "No amiche", "Sveglia", "Letto", "Polvere", "No piastra", "Scusa", "Papà", "Libro", "No TV", "Zia", "Lavastoviglie", "Cucina", "No musica", "Spesa", "No smalto", "Compiti"] }, en: { title: "Penalty", desc: "Detox", finePrint: ["Silence."], items: ["No Social", "Bath", "No makeup", "Closet", "Laundry", "No phone", "Table", "No mirror", "Study", "No friends", "Wake up", "Bed", "Dust", "No hair", "Sorry", "Dad", "Book", "No TV", "Aunt", "Dishwasher", "Kitchen", "No music", "Groceries", "No polish", "Homework"] } } }
+            nonni: {
+                color: "bg-emerald-600", lightColor: "bg-emerald-50", darkColor: "bg-emerald-900/40", textColor: "text-emerald-700", icon: "🧶",
+                content: {
+                    it: { title: "Nonni", desc: "Cibo", finePrint: ["Mangia tutto."], items: ["Lezione Smartphone", "Ascolto storia", "Mangio tutto", "Partita carte", "Borse spesa", "Sintonizzo TV", "Abbraccio", "Orto", "Giornale", "No telefono", "Cerca occhiali", "Film B/N", "Spiego Cloud", "Autista", "Ho fame", "Telefono fisso", "Guardo foto", "Pressione", "Ago", "Caffè", "Gelato", "Ascolto", "Videochiamata", "Bene", "Consigli"] },
+                    en: { title: "Grandparents", desc: "Food", finePrint: ["Eat all."], items: ["Smartphone", "Story", "Eat all", "Cards", "Bags", "TV", "Hug", "Garden", "News", "No phone", "Glasses", "BW Movie", "Cloud", "Driver", "Hungry", "Phone", "Photos", "Pressure", "Needle", "Coffee", "Ice cream", "Listen", "Video call", "Love", "Advice"] }
+                }
+            },
+            moglie: {
+                color: "bg-rose-500", lightColor: "bg-rose-50", darkColor: "bg-rose-900/40", textColor: "text-rose-600", icon: "💍",
+                content: {
+                    it: { title: "Moglie", desc: "Ragione", finePrint: ["Ho ragione."], items: ["Jolly Ragione", "Massaggio piedi", "Cena cucinata", "Film romantico", "Uscita amiche", "Colazione letto", "Controllo TV", "Bagno caldo", "Sherpa shopping", "Complimenti", "Gestisco figli", "No suocera", "Tisana", "Ascolto sfoghi", "Niente domande", "Telecomando", "Stiro io", "Cucina pulita", "Dormita", "Scegli ristorante", "Bacio", "Torta", "Spazzatura", "No Tech", "Abbraccio"] },
+                    en: { title: "Wife", desc: "Right", finePrint: ["I'm right."], items: ["Joker Right", "Feet", "Dinner", "Movie", "Girls night", "Breakfast", "TV", "Bath", "Shopping", "Compliments", "Kids", "No in-laws", "Tea", "Vent", "No Qs", "Remote", "Iron", "Kitchen", "Sleep", "Restaurant", "Kiss", "Cake", "Trash", "No Tech", "Hug"] }
+                }
+            },
+            marito: {
+                color: "bg-slate-600", lightColor: "bg-slate-100", darkColor: "bg-slate-800/40", textColor: "text-slate-700", icon: "🍺",
+                content: {
+                    it: { title: "Marito", desc: "Divano", finePrint: ["Birra inc."], items: ["Serata Libera", "Jolly Ragione", "Telecomando", "No parlare", "Tuo piatto", "Schiena", "Birra", "No lavori", "Dormita", "Azione", "Idraulico", "Risiko", "Colazione", "Muscoli", "Spazzatura", "Brico", "Hobby", "Amici", "DJ", "Pizza", "No parenti", "Caffè", "Silenzio", "Casa", "Bacio"] },
+                    en: { title: "Husband", desc: "Sofa", finePrint: ["Beer inc."], items: ["Night out", "Joker Right", "Remote", "No talk", "Meal", "Back", "Beer", "No chores", "Sleep", "Action", "Plumber", "Risk", "Breakfast", "Muscles", "Trash", "Hardware", "Hobby", "Friends", "DJ", "Pizza", "No kin", "Coffee", "Silence", "Home", "Kiss"] }
+                }
+            },
+            figlio: {
+                color: "bg-orange-500", lightColor: "bg-orange-50", darkColor: "bg-orange-900/40", textColor: "text-orange-600", icon: "🌪️",
+                content: {
+                    it: { title: "Figlio", desc: "Campione", finePrint: ["Lava denti."], items: ["Videogiochi", "Nanna", "No verdure", "Menu", "No lavoretto", "Cinema", "Gelato", "Tempo", "Pancakes", "Tablet", "Figurine", "Cuscini", "Nerf", "Livello", "Parco", "Campeggio", "DJ", "Storia", "Hamburger", "Camera", "Giro", "Lezione", "Cartone", "Sorpresa", "Abbraccio"] },
+                    en: { title: "Son", desc: "Champ", finePrint: ["Brush teeth."], items: ["Games", "Bedtime", "No veg", "Menu", "No chore", "Movie", "Ice cream", "Time", "Pancakes", "Tablet", "Stickers", "Pillows", "Nerf", "Level", "Park", "Camping", "DJ", "Story", "Burger", "Room", "Trip", "Lesson", "Cartoon", "Surprise", "Hug"] }
+                }
+            },
+            figlia: {
+                color: "bg-cyan-500", lightColor: "bg-cyan-50", darkColor: "bg-cyan-900/40", textColor: "text-cyan-600", icon: "🦄",
+                content: {
+                    it: { title: "Figlia", desc: "Principessa", finePrint: ["Sorriso."], items: ["Nanna", "Dolce", "Creativo", "No riordino", "Disney", "Parrucchiere", "Uscita", "Gelato", "Biscotti", "Cena", "Storia", "Disco", "No lavoretti", "Pic-nic", "Progetto", "Smalto", "Tenda", "Gioco", "Imparo", "Parco", "Pigiama", "Gioco tavolo", "Regalo", "Disegno", "Abbraccio"] },
+                    en: { title: "Daughter", desc: "Princess", finePrint: ["Smile."], items: ["Bedtime", "Sweet", "Creative", "No clean", "Disney", "Hair", "Outing", "Ice cream", "Cookies", "Dinner", "Story", "Disco", "No chores", "Picnic", "Project", "Nail", "Tent", "Game", "Learn", "Park", "Pajama", "Board game", "Gift", "Draw", "Hug"] }
+                }
+            },
+            punizione_figlio: {
+                color: "bg-yellow-600", lightColor: "bg-yellow-50", darkColor: "bg-yellow-900/40", textColor: "text-yellow-700", icon: "🚧",
+                content: {
+                    it: { title: "Punizione", desc: "Reality", finePrint: ["Subito."], items: ["No Video", "Piatti", "Spazzatura", "Camera", "No WiFi", "Tavola", "Scarpe", "Cucina", "No uscita", "Sveglia", "Letto", "Aspirapolvere", "No cuffie", "Scusa", "Abbraccio", "Libro", "Cane", "No dolci", "Nonna", "Lavastoviglie", "Vetri", "No TV", "Studio", "No Calcio", "Compiti"] },
+                    en: { title: "Penalty", desc: "Reality", finePrint: ["Now."], items: ["No Video", "Dishes", "Trash", "Room", "No WiFi", "Table", "Shoes", "Cook", "No out", "Wake up", "Bed", "Vacuum", "No phones", "Sorry", "Hug", "Book", "Dog", "No sweet", "Grandma", "Dishwasher", "Windows", "No TV", "Study", "No Soccer", "Homework"] }
+                }
+            },
+            punizione_figlia: {
+                color: "bg-red-600", lightColor: "bg-red-50", darkColor: "bg-red-900/40", textColor: "text-red-700", icon: "📵",
+                content: {
+                    it: { title: "Punizione", desc: "Detox", finePrint: ["Silenzio."], items: ["No Social", "Bagno", "No trucco", "Armadio", "Stendere", "No telefono", "Tavola", "No specchio", "Studio", "No amiche", "Sveglia", "Letto", "Polvere", "No piastra", "Scusa", "Papà", "Libro", "No TV", "Zia", "Lavastoviglie", "Cucina", "No musica", "Spesa", "No smalto", "Compiti"] },
+                    en: { title: "Penalty", desc: "Detox", finePrint: ["Silence."], items: ["No Social", "Bath", "No makeup", "Closet", "Laundry", "No phone", "Table", "No mirror", "Study", "No friends", "Wake up", "Bed", "Dust", "No hair", "Sorry", "Dad", "Book", "No TV", "Aunt", "Dishwasher", "Kitchen", "No music", "Groceries", "No polish", "Homework"] }
+                }
+            },
+            sorella: {
+                color: "bg-purple-500", lightColor: "bg-purple-50", darkColor: "bg-purple-900/40", textColor: "text-purple-600", icon: "😈",
+                content: {
+                    it: { title: "Sorella", desc: "Nemica", finePrint: ["Valida."], items: ["Esco camera", "No trucchi", "Bagno", "Copro", "Felpa", "Ascolto", "Compiti", "Serie TV", "Autista", "Tregua", "Tè", "Bodyguard", "Foto", "Karaoke", "Dolce", "Diario", "Pulizia", "TikTok", "Penne", "Brava", "Telecomando", "Passaggio", "Sticker", "Film", "Bene"] },
+                    en: { title: "Sister", desc: "Frenemy", finePrint: ["Valid."], items: ["Leave room", "No makeup", "Bath", "Cover", "Hoodie", "Listen", "Homework", "TV", "Driver", "Truce", "Tea", "Bodyguard", "Photo", "Karaoke", "Dessert", "Diary", "Clean", "TikTok", "Pens", "Praise", "Remote", "Ride", "Sticker", "Movie", "Love u"] }
+                }
+            },
+            fratello: {
+                color: "bg-indigo-500", lightColor: "bg-indigo-50", darkColor: "bg-indigo-900/40", textColor: "text-indigo-600", icon: "👽",
+                content: {
+                    it: { title: "Fratello", desc: "Erede", finePrint: ["Valido."], items: ["Videogioco", "No spia", "Esco", "Pizza", "Vinci", "No copio", "Soldi", "Livello", "Colpa mia", "No roba", "Online", "No fastidio", "Panino", "Carica", "No disegni", "Difesa", "Gioco", "Tablet", "Capelli", "Alleanza", "Oggetti", "Trucco", "Imbarazzo", "Tregua", "Doppione"] },
+                    en: { title: "Brother", desc: "Heir", finePrint: ["Valid."], items: ["Game", "No snitch", "Leave", "Pizza", "Win", "No copy", "Money", "Level", "My fault", "No touch", "Online", "Stop", "Sandwich", "Charge", "Draw", "Defense", "Game", "Tablet", "Hair", "Alliance", "Items", "Trick", "Shame", "Truce", "Duplicate"] }
+                }
+            }
         };
 
         const playSound = (type) => {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
             const osc = ctx.createOscillator(); const gain = ctx.createGain();
             osc.connect(gain); gain.connect(ctx.destination);
             const now = ctx.currentTime;
-            if (type === 'click') { osc.frequency.setValueAtTime(600, now); gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now+0.1); osc.start(now); osc.stop(now+0.1); }
-            else if (type === 'success') { osc.type='triangle'; osc.frequency.setValueAtTime(300, now); osc.frequency.linearRampToValueAtTime(600, now+0.2); gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0, now+0.4); osc.start(now); osc.stop(now+0.4); }
+            if (type === 'click') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(600, now); osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'success') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(400, now); osc.frequency.linearRampToValueAtTime(800, now + 0.3);
+                gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0, now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
+            } else if (type === 'shutter') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(800, now); 
+                gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                osc.start(now); osc.stop(now + 0.08);
+            }
         };
+        const triggerHaptic = () => { if (navigator.vibrate) navigator.vibrate(10); };
 
         const App = () => {
             const [category, setCategory] = useState(null);
             const [index, setIndex] = useState(0);
             const [darkMode, setDarkMode] = useState(false);
-            const [showInfo, setShowInfo] = useState(false);
             const [lang, setLang] = useState('it');
+            const [showInfo, setShowInfo] = useState(false);
             
-            // Scanner Mode States
             const [isScannerMode, setIsScannerMode] = useState(false);
-            const [redemptionData, setRedemptionData] = useState(null); // { date: string } if redeemed
-            const [uniqueId, setUniqueId] = useState("");
+            const [redemptionData, setRedemptionData] = useState(null);
+            const [stableId, setStableId] = useState("");
 
             const qrRef = useRef(null);
             const cardRef = useRef(null);
 
-            // 1. Initialization Logic
             useEffect(() => {
                 const params = new URLSearchParams(window.location.search);
                 const urlCat = params.get('c');
                 const urlIdx = params.get('i');
-                const urlUid = params.get('u');
 
                 if (urlCat && voucherDB[urlCat] && urlIdx) {
                     setIsScannerMode(true);
                     setCategory(urlCat);
-                    setIndex(parseInt(urlIdx));
-                    // If unique ID exists in URL, use it, else generate temp one for display
-                    const uid = urlUid || `${urlCat}-${urlIdx}`;
-                    setUniqueId(uid);
+                    const safeIdx = Math.max(0, Math.min(parseInt(urlIdx), voucherDB[urlCat].content['it'].items.length - 1));
+                    setIndex(safeIdx);
                     
-                    // CHECK LEDGER (Wife's Phone)
-                    const status = checkRedemption(uid);
+                    const id = `${urlCat}-${safeIdx}`; 
+                    setStableId(id);
+
+                    const status = checkRedemption(id);
                     setRedemptionData(status);
                 } else {
                     setIsScannerMode(false);
@@ -188,59 +266,77 @@
                 else document.documentElement.classList.remove('dark');
             }, [darkMode]);
 
-            // 2. Generator Logic (Husband's Phone)
             useEffect(() => {
-                if (!isScannerMode && category && qrRef.current && typeof QRCode !== 'undefined') {
-                    qrRef.current.innerHTML = '';
-                    const uid = `${category}-${index}-${Date.now()}`; // Unique ID based on time to avoid collision
-                    // URL needs to point to the live app
-                    const deepLink = `${window.location.origin}${window.location.pathname}?c=${category}&i=${index}&u=${uid}`;
+                if (!isScannerMode && category && qrRef.current && window.QRious) {
+                    const baseUrl = window.location.href.split('?')[0];
+                    const deepLink = `${baseUrl}?c=${category}&i=${index}`;
                     
-                    setTimeout(() => {
-                        try {
-                            new QRCode(qrRef.current, {
-                                text: deepLink,
-                                width: 120, height: 120,
-                                colorDark : "#000000", colorLight : "#ffffff",
-                                correctLevel : QRCode.CorrectLevel.L
-                            });
-                        } catch(e) {}
-                    }, 50);
+                    try {
+                        new QRious({
+                            element: qrRef.current,
+                            value: deepLink,
+                            size: 150,
+                            backgroundAlpha: 0,
+                            foreground: '#000000'
+                        });
+                    } catch(e) { console.error("QR Error", e); }
                 }
             }, [index, category, lang, isScannerMode]);
 
-            // 3. Action Handlers
             const handleValidate = () => {
-                if (!uniqueId) return;
-                saveToLedger(uniqueId, { redeemed: true });
-                setRedemptionData({ timestamp: new Date().toISOString() });
+                if (!stableId) return;
+                saveRedemption(stableId);
+                setRedemptionData({ redeemed: true, date: new Date().toISOString() });
                 playSound('success');
+            };
+
+            const handleReset = () => {
+                if (!stableId) return;
+                resetRedemption(stableId);
+                setRedemptionData(null);
+                playSound('click');
+            };
+
+            const handleShare = async () => {
+                if (!cardRef.current) return;
+                playSound('shutter');
+                try {
+                    await new Promise(r => setTimeout(r, 100));
+                    const canvas = await html2canvas(cardRef.current, { scale: 2, backgroundColor: null, useCORS: true, logging: false });
+                    canvas.toBlob(async (blob) => {
+                        if (!blob) return;
+                        const file = new File([blob], `voucher_${category}.png`, { type: 'image/png' });
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            try { await navigator.share({ files: [file], title: 'Voucher' }); } catch (err) {}
+                        } else {
+                            const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = file.name; link.click();
+                            alert(uiText[lang].saved);
+                        }
+                    }, 'image/png');
+                } catch (e) { alert(uiText[lang].err); }
             };
 
             const toggleLang = () => setLang(prev => prev === 'it' ? 'en' : 'it');
             
-            // Helper to get current content
             const currentData = category ? voucherDB[category] : null;
             const currentContent = currentData ? currentData.content[lang] : null;
 
-            // --- RENDER ---
             return (
                 <div className={`min-h-screen flex flex-col items-center justify-center transition-colors duration-300 ${darkMode ? 'bg-slate-950' : 'bg-gray-50'}`}>
                     
                     {/* INFO MODAL */}
                     {showInfo && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowInfo(false)}>
-                            <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl" onClick={e => e.stopPropagation()}>
-                                <h3 className="text-xl font-black mb-4 text-gray-800">{uiText[lang].instructionsTitle}</h3>
+                            <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl text-left" onClick={e => e.stopPropagation()}>
+                                <h3 className="text-xl font-black mb-4 text-gray-800">{uiText[lang].instrTitle}</h3>
                                 <div className="space-y-2 text-sm text-gray-600 mb-6">
-                                    {uiText[lang].instructions.map((line, i) => <p key={i}>{line}</p>)}
+                                    {uiText[lang].instrBody.map((line, i) => <p key={i}>{line}</p>)}
                                 </div>
                                 <button onClick={() => setShowInfo(false)} className="w-full py-3 bg-slate-800 text-white font-bold rounded-xl">OK</button>
                             </div>
                         </div>
                     )}
 
-                    {/* NAVBAR */}
                     <nav className={`w-full z-20 px-6 py-4 flex justify-between items-center sticky top-0 backdrop-blur-md border-b transition-colors ${darkMode ? 'bg-slate-900/80 border-slate-700' : 'bg-white/70 border-gray-200'}`}>
                         <div className="flex items-center gap-2 cursor-pointer" onClick={() => !isScannerMode && setCategory(null)}>
                             <span className="text-2xl">✨</span>
@@ -254,19 +350,17 @@
                         </div>
                     </nav>
 
-                    {/* SCANNER MODE HEADER */}
                     {isScannerMode && (
                         <div className="w-full bg-indigo-600 text-white text-center py-2 font-bold text-xs tracking-widest animate-pulse">
-                            {uiText[lang].scannerMode}
+                            {uiText[lang].modeScan}
                         </div>
                     )}
 
                     <main className="flex-1 w-full max-w-4xl z-10 p-4 flex flex-col items-center justify-center">
                         
-                        {/* --- SELECTOR (GENERATOR MODE) --- */}
                         {(!category && !isScannerMode) && (
                             <div className="w-full animate-fade-in">
-                                <h2 className={`text-center text-3xl md:text-4xl font-black mb-8 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{uiText[lang].homeTitle}</h2>
+                                <h2 className={`text-center text-3xl md:text-4xl font-black mb-8 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{uiText[lang].home}</h2>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     {Object.entries(voucherDB).map(([key, data]) => (
                                         <button key={key} onClick={() => setCategory(key)} className={`relative overflow-hidden rounded-3xl p-6 text-left transition-transform hover:scale-105 shadow-sm border-2 border-transparent hover:border-black/5 ${darkMode ? data.darkColor : data.lightColor}`}>
@@ -279,71 +373,77 @@
                             </div>
                         )}
 
-                        {/* --- VOUCHER CARD (SHARED VIEW) --- */}
                         {category && currentContent && (
                             <div className="flex flex-col items-center w-full max-w-sm animate-fade-in">
-                                <div className={`relative w-full overflow-hidden rounded-[32px] shadow-2xl border-4 transition-all duration-300 transform 
-                                    ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-white'}
-                                    ${redemptionData ? 'grayscale' : ''}`}>
-                                    
-                                    {/* Header */}
-                                    <div className={`h-48 ${currentData.color} p-6 flex flex-col items-center justify-center text-white relative overflow-hidden`}>
-                                        <div className="absolute top-[-50%] left-[-50%] w-full h-full bg-white/20 rounded-full blur-3xl"></div>
-                                        <div className="text-5xl drop-shadow-lg z-10">{currentData.icon}</div>
-                                        <h2 className="text-3xl font-black uppercase tracking-widest mt-2 z-10">{currentContent.title}</h2>
-                                    </div>
+                                <div className="relative w-full aspect-[3/5] perspective-1000 mb-6">
+                                    <div ref={cardRef} className={`relative w-full h-full rounded-[32px] overflow-hidden flex flex-col shadow-2xl border-4 transition-all duration-300 transform 
+                                        ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-white'}
+                                        ${redemptionData ? 'grayscale opacity-90' : ''}`}
+                                    >
+                                        <div className={`h-[35%] ${currentData.color} p-6 flex flex-col items-center justify-center text-white relative overflow-hidden`}>
+                                            <div className="absolute top-[-50%] left-[-50%] w-full h-full bg-white/20 rounded-full blur-3xl"></div>
+                                            <div className="text-5xl drop-shadow-lg z-10">{currentData.icon}</div>
+                                            <h2 className="text-3xl font-black uppercase tracking-widest mt-2 z-10">{currentContent.title}</h2>
+                                            <p className="z-10 text-xs font-bold uppercase opacity-80 mt-1 tracking-wider bg-black/10 px-3 py-1 rounded-full">{currentContent.desc}</p>
+                                        </div>
 
-                                    {/* Body */}
-                                    <div className={`p-6 text-center ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
-                                        <h3 className={`text-2xl font-black leading-tight mb-4 ${darkMode ? 'text-white' : currentData.textColor}`}>"{currentContent.items[index]}"</h3>
-                                        <p className={`text-xs italic opacity-70 mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>{currentContent.finePrint[index % currentContent.finePrint.length]}</p>
+                                        <div className={`flex-1 flex flex-col items-center justify-center p-6 text-center ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
+                                            <h3 className={`text-2xl font-black leading-tight mb-4 ${darkMode ? 'text-white' : currentData.textColor}`}>"{currentContent.items[index]}"</h3>
+                                            <p className={`text-xs italic opacity-70 mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>{currentContent.finePrint[index % currentContent.finePrint.length]}</p>
 
-                                        {/* Dynamic Footer Area */}
-                                        <div className="bg-gray-100 dark:bg-slate-900 p-4 rounded-xl flex flex-col items-center justify-center min-h-[160px]">
-                                            
-                                            {/* CASE 1: ALREADY REDEEMED */}
-                                            {redemptionData ? (
-                                                <div className="text-center animate-bounce-short">
-                                                    <div className="text-red-500 text-6xl mb-2">❌</div>
-                                                    <p className="font-bold text-red-600 text-sm">{uiText[lang].alreadyUsed}</p>
-                                                    <p className="text-xs text-gray-500 font-mono mt-1">{new Date(redemptionData.timestamp).toLocaleString()}</p>
-                                                </div>
-                                            ) : (
-                                                /* CASE 2: SCANNER MODE (SHOW BUTTON) */
-                                                isScannerMode ? (
-                                                    <button 
-                                                        onClick={handleValidate}
-                                                        className="w-full py-4 bg-green-500 hover:bg-green-600 text-white font-black text-xl rounded-xl shadow-lg transform active:scale-95 transition-all"
-                                                    >
-                                                        {uiText[lang].use}
-                                                    </button>
+                                            <div className="mt-auto w-full bg-gray-50 dark:bg-slate-900 p-4 rounded-xl flex flex-col items-center shadow-sm min-h-[160px] justify-center">
+                                                
+                                                {/* STATO 1: GIA' USATO */}
+                                                {redemptionData ? (
+                                                    <div className="text-center w-full">
+                                                        <div className="text-red-500 text-6xl mb-2">⛔</div>
+                                                        <p className="font-bold text-red-600 text-xs tracking-widest mb-1">{uiText[lang].usedTitle}</p>
+                                                        <p className="text-[10px] text-gray-500 font-mono mb-4">{new Date(redemptionData.date).toLocaleDateString()} {new Date(redemptionData.date).toLocaleTimeString()}</p>
+                                                        
+                                                        {isScannerMode && (
+                                                            <button onClick={handleReset} className="w-full py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-sm rounded-lg transition-colors">
+                                                                {uiText[lang].resetBtn}
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 ) : (
-                                                    /* CASE 3: GENERATOR MODE (SHOW QR) */
-                                                    <>
-                                                        <div className="flex justify-between w-full text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-                                                            <span>{uiText[lang].validity}</span><span>{uiText[lang].scanMe}</span>
-                                                        </div>
-                                                        <div ref={qrRef} className="bg-white p-2 rounded-lg"></div>
-                                                    </>
-                                                )
-                                            )}
+                                                    /* STATO 2: SCANNER MODE */
+                                                    isScannerMode ? (
+                                                        <button 
+                                                            onClick={handleValidate}
+                                                            className="w-full py-4 bg-green-500 hover:bg-green-600 text-white font-black text-xl rounded-xl shadow-lg transform active:scale-95 transition-all"
+                                                        >
+                                                            {uiText[lang].redeemBtn}
+                                                        </button>
+                                                    ) : (
+                                                        /* STATO 3: GENERATOR MODE */
+                                                        <>
+                                                            <div className="flex justify-between w-full text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+                                                                <span>{uiText[lang].validity}</span><span>{uiText[lang].scan}</span>
+                                                            </div>
+                                                            <canvas ref={qrRef} className="bg-white p-2 rounded-lg inline-block"></canvas>
+                                                        </>
+                                                    )
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* CONTROLS (Only visible to Generator, hidden for Scanner to prevent cheating) */}
                                 {!isScannerMode && (
-                                    <div className="w-full mt-6 flex gap-3">
-                                        <button onClick={() => setIndex((prev) => (prev - 1 + voucherDB[category].content[lang].items.length) % voucherDB[category].content[lang].items.length)} className={`p-4 rounded-2xl shadow-sm border ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-100'}`}>⬅️</button>
-                                        <button onClick={() => setIndex(Math.floor(Math.random() * voucherDB[category].content[lang].items.length))} className={`flex-1 rounded-2xl font-bold shadow-sm border ${darkMode ? 'bg-slate-800 border-slate-700 text-purple-400' : 'bg-white border-gray-100 text-purple-600'}`}>{uiText[lang].random}</button>
-                                        <button onClick={() => setIndex((prev) => (prev + 1) % voucherDB[category].content[lang].items.length)} className={`p-4 rounded-2xl shadow-sm border ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-100'}`}>➡️</button>
+                                    <div className="w-full mt-6 space-y-3">
+                                        <div className="flex gap-3">
+                                            <button onClick={() => setIndex((prev) => (prev - 1 + voucherDB[category].content[lang].items.length) % voucherDB[category].content[lang].items.length)} className={`p-4 rounded-2xl shadow-sm border ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-100'}`}>⬅️</button>
+                                            <button onClick={() => setIndex(Math.floor(Math.random() * voucherDB[category].content[lang].items.length))} className={`flex-1 rounded-2xl font-bold shadow-sm border ${darkMode ? 'bg-slate-800 border-slate-700 text-purple-400' : 'bg-white border-gray-100 text-purple-600'}`}>{uiText[lang].random}</button>
+                                            <button onClick={() => setIndex((prev) => (prev + 1) % voucherDB[category].content[lang].items.length)} className={`p-4 rounded-2xl shadow-sm border ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-100'}`}>➡️</button>
+                                        </div>
+                                        <button onClick={handleShare} className={`w-full p-3 rounded-2xl font-bold text-sm border shadow-sm ${darkMode ? 'bg-slate-800 border-slate-700 text-blue-400' : 'bg-white border-gray-100 text-blue-600'}`}>{uiText[lang].share}</button>
                                     </div>
                                 )}
                                 
-                                {/* Home Button for Scanner */}
                                 {isScannerMode && (
-                                    <button onClick={() => { setIsScannerMode(false); setCategory(null); }} className="mt-8 text-gray-400 text-sm underline hover:text-gray-600">
-                                        Torna alla Home
+                                    <button onClick={() => { setIsScannerMode(false); setCategory(null); }} className="mt-4 text-gray-400 text-sm underline hover:text-gray-600">
+                                        Home
                                     </button>
                                 )}
                             </div>
